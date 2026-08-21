@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Official signed installers for BMDL Raw Data Register.">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
+    <title>BMDL Raw Data Register · Official download</title>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="download.js"></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <div><strong>BMDL</strong><span>Bio-Integrated Microdevices Laboratory</span></div>
+      <span>Koç University · Lab software</span>
+    </header>
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <p class="eyebrow">Official signed distribution</p>
+        <h1 id="page-title">BMDL Raw Data Register</h1>
+        <p class="lede">Register instrument-generated raw data offline, create SHA-256 fingerprints, and export a byte-verified transfer package.</p>
+        <div class="release-line" aria-live="polite">
+          <strong id="release-version">Stable release unavailable</strong>
+          <span id="release-date">The release catalog has not been published yet.</span>
+        </div>
+        <p id="release-notes" class="release-notes"></p>
+      </section>
+
+      <section class="downloads" aria-labelledby="download-title">
+        <header><p class="section-number">01</p><h2 id="download-title">Choose an installer</h2></header>
+        <div class="download-grid">
+          <article id="macos-card" class="download-card" data-platform="macos">
+            <span class="recommendation" hidden>Recommended for this computer</span>
+            <p class="platform">macOS</p>
+            <h3>Universal Mac installer</h3>
+            <p>For Apple Silicon and Intel Macs. Developer ID signed, notarized, and stapled.</p>
+            <a id="macos-download" class="download-button disabled" aria-disabled="true">DOWNLOAD DMG</a>
+          </article>
+          <article id="windows-card" class="download-card" data-platform="windows">
+            <span class="recommendation" hidden>Recommended for this computer</span>
+            <p class="platform">Windows</p>
+            <h3>Windows x64 installer</h3>
+            <p>For Windows 10 and Windows 11 x64. Authenticode signed by the verified publisher.</p>
+            <a id="windows-download" class="download-button disabled" aria-disabled="true">DOWNLOAD EXE</a>
+          </article>
+        </div>
+      </section>
+
+      <section class="instructions" aria-labelledby="install-title">
+        <header><p class="section-number">02</p><h2 id="install-title">Install in three steps</h2></header>
+        <ol>
+          <li><strong>Download the correct installer.</strong><span>Keep both platform options visible when helping another lab member.</span></li>
+          <li><strong>Verify the publisher prompt.</strong><span>macOS should identify the notarized Developer ID app; Windows should show the approved institutional publisher.</span></li>
+          <li><strong>Open the application.</strong><span>Configure the instrument once. Registration, hashing, and export continue to work without Internet access.</span></li>
+        </ol>
+      </section>
+
+      <section class="integrity" aria-labelledby="integrity-title">
+        <header><p class="section-number">03</p><h2 id="integrity-title">Installer integrity</h2></header>
+        <p>The installer checksum confirms the downloaded application package. It is separate from the SHA-256 fingerprints that Raw Data Register creates for research files; an installer checksum makes no scientific claim about raw data.</p>
+        <details>
+          <summary>Show checksums and technical details</summary>
+          <dl>
+            <div><dt>macOS DMG · SHA-256</dt><dd><code id="macos-sha">Unavailable</code></dd></div>
+            <div><dt>Windows EXE · SHA-256</dt><dd><code id="windows-sha">Unavailable</code></dd></div>
+          </dl>
+          <a id="technical-details" class="technical-link" hidden>Open signed release details ↗</a>
+        </details>
+      </section>
+    </main>
+    <footer>
+      <span>Need installation help?</span>
+      <a href="mailto:lbeker@ku.edu.tr">lbeker@ku.edu.tr</a>
+    </footer>
+  </body>
+</html>

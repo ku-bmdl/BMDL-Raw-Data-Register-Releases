@@ -1,0 +1,8 @@
+{
+  "name": "bmdl-raw-data-register-releases",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test scripts/*.test.mjs"
+  }
+}

@@ -1,0 +1,53 @@
+name: Publish update catalog and download page
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: release-catalog
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Download the complete immutable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "${{ github.event.release.tag_name }}" --dir release-assets
+      - name: Validate signatures catalog and advance one channel
+        env:
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          RELEASE_ASSETS_DIR: release-assets
+          RELEASE_SITE_DIR: site/raw-data-register
+        run: node scripts/publish-release.mjs
+      - run: npm test
+      - name: Commit monotonic channel pointer
+        run: |
+          git config user.name "bmdl-release-bot"
+          git config user.email "lbeker@ku.edu.tr"
+          git add -A site/raw-data-register
+          git commit -m "catalog: publish ${{ github.event.release.tag_name }}"
+          git push origin HEAD:main
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
