@@ -7,6 +7,16 @@ const repository = "ku-bmdl/BMDL-Raw-Data-Register-Releases";
 const supportedPlatforms = ["darwin-aarch64", "darwin-x86_64", "windows-x86_64"];
 const semverPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;
 
+function releaseAssetNames(version) {
+  return {
+    dmg: `BMDL-Raw-Data-Register_${version}_universal.dmg`,
+    macUpdater: `BMDL-Raw-Data-Register_${version}_universal.app.tar.gz`,
+    macSignature: `BMDL-Raw-Data-Register_${version}_universal.app.tar.gz.sig`,
+    windowsUpdater: `BMDL-Raw-Data-Register_${version}_x64-setup.exe`,
+    windowsSignature: `BMDL-Raw-Data-Register_${version}_x64-setup.exe.sig`,
+  };
+}
+
 export function parseSemver(value) {
   const match = semverPattern.exec(String(value || ""));
   if (!match) throw new Error(`Invalid SemVer: ${value}`);
@@ -60,12 +70,18 @@ function validateFeed(feed, tag) {
   if (JSON.stringify(platforms) !== JSON.stringify([...supportedPlatforms].sort())) {
     throw new Error("Updater feed does not contain the complete supported platform set.");
   }
+  const names = releaseAssetNames(feed.version);
+  const expectedByPlatform = {
+    "darwin-aarch64": names.macUpdater,
+    "darwin-x86_64": names.macUpdater,
+    "windows-x86_64": names.windowsUpdater,
+  };
   for (const [platform, artifact] of Object.entries(feed.platforms)) {
     const url = new URL(artifact.url);
     if (
       url.protocol !== "https:"
       || url.hostname !== "github.com"
-      || !url.pathname.startsWith(`/${repository}/releases/download/${tag}/`)
+      || url.pathname !== `/${repository}/releases/download/${tag}/${expectedByPlatform[platform]}`
     ) throw new Error(`Untrusted updater URL for ${platform}.`);
     if (typeof artifact.signature !== "string" || !artifact.signature.trim()) {
       throw new Error(`Missing updater signature for ${platform}.`);
@@ -74,8 +90,14 @@ function validateFeed(feed, tag) {
 }
 
 function validateChecksums(assetsDir, manifest) {
+  const names = releaseAssetNames(manifest.application_version);
+  const expectedArtifactNames = Object.values(names).sort();
+  const manifestArtifactNames = (manifest.artifacts || []).map(artifact => artifact.name).sort();
+  if (JSON.stringify(manifestArtifactNames) !== JSON.stringify(expectedArtifactNames)) {
+    throw new Error("Release manifest does not contain the exact signed platform asset set.");
+  }
   const expectedNames = [
-    ...(manifest.artifacts || []).map(artifact => basename(artifact.name)),
+    ...expectedArtifactNames,
     "SHA256SUMS.txt",
     "release-manifest.json",
     "tauri-update.json",
@@ -92,6 +114,15 @@ function validateChecksums(assetsDir, manifest) {
     }
   }
   const checksumLines = readFileSync(join(assetsDir, "SHA256SUMS.txt"), "utf8").trim().split("\n");
+  const checksumNames = checksumLines.map(line => line.match(/^([0-9a-f]{64})  ([^/]+)$/)?.[2]);
+  const expectedChecksumNames = [
+    ...expectedArtifactNames,
+    "release-manifest.json",
+    "tauri-update.json",
+  ].sort();
+  if (JSON.stringify(checksumNames.filter(Boolean).sort()) !== JSON.stringify(expectedChecksumNames)) {
+    throw new Error("SHA256SUMS.txt does not cover the exact release asset set.");
+  }
   for (const line of checksumLines) {
     const match = /^([0-9a-f]{64})  ([^/]+)$/.exec(line);
     if (!match) throw new Error("SHA256SUMS.txt contains an invalid line.");
@@ -100,13 +131,15 @@ function validateChecksums(assetsDir, manifest) {
   }
 }
 
-export function publishRelease({ event, assetsDir, siteDir }) {
+export function publishRelease({ event, assetsDir, siteDir, channelOverride = null }) {
   const release = event.release;
   if (!release?.published_at || release.draft) throw new Error("Only a published, non-draft release can update a channel.");
   const tag = release.tag_name;
   const feed = readJson(join(assetsDir, "tauri-update.json"));
   const manifest = readJson(join(assetsDir, "release-manifest.json"));
-  const channel = release.prerelease ? "pilot" : "stable";
+  const releaseChannel = release.prerelease ? "pilot" : "stable";
+  const channel = channelOverride || releaseChannel;
+  if (!new Set(["pilot", "stable"]).has(channel)) throw new Error("Invalid channel override.");
   validateFeed(feed, tag);
   validateChecksums(assetsDir, manifest);
 
@@ -115,9 +148,29 @@ export function publishRelease({ event, assetsDir, siteDir }) {
   }
   if (
     manifest.application_id !== applicationId
-    || manifest.channel !== channel
+    || manifest.channel !== releaseChannel
     || manifest.release_status !== "verified"
   ) throw new Error("Release manifest identity, channel, or verification status is invalid.");
+  if (channel === "stable" && releaseChannel !== "stable") {
+    throw new Error("A prerelease cannot be promoted to the stable channel.");
+  }
+  if (
+    !/^[0-9a-f]{40}$/iu.test(String(manifest.source_commit || ""))
+    || Number.isNaN(Date.parse(manifest.built_at))
+    || JSON.stringify(manifest.supported_manifest_schema_versions) !== JSON.stringify(["1.0"])
+    || !manifest.signing?.apple?.team_id
+    || !manifest.signing?.apple?.notarization_submission_id
+    || !manifest.signing?.windows?.account
+    || !manifest.signing?.windows?.profile
+    || !manifest.signing?.windows?.publisher
+    || !manifest.signing?.updater?.key_id
+  ) throw new Error("Release provenance or signing evidence is incomplete.");
+  const names = releaseAssetNames(feed.version);
+  if (
+    readFileSync(join(assetsDir, names.macSignature), "utf8").trim() !== feed.platforms["darwin-aarch64"].signature
+    || feed.platforms["darwin-aarch64"].signature !== feed.platforms["darwin-x86_64"].signature
+    || readFileSync(join(assetsDir, names.windowsSignature), "utf8").trim() !== feed.platforms["windows-x86_64"].signature
+  ) throw new Error("Updater feed signatures do not match the immutable signature assets.");
   if (channel === "stable" && feed.version.includes("-")) {
     throw new Error("A prerelease version cannot advance the stable channel.");
   }
@@ -159,6 +212,7 @@ if (process.argv[1]?.endsWith("publish-release.mjs")) {
       event: readJson(process.env.GITHUB_EVENT_PATH),
       assetsDir: process.env.RELEASE_ASSETS_DIR || "release-assets",
       siteDir: process.env.RELEASE_SITE_DIR || "site/raw-data-register",
+      channelOverride: process.env.RELEASE_CHANNEL_OVERRIDE || null,
     });
     console.log(`Published ${result.channel} pointer ${result.version}.`);
   } catch (error) {

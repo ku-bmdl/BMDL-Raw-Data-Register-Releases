@@ -3,14 +3,16 @@
 Public, binary-only distribution infrastructure for BMDL Raw Data Register.
 Application source code is maintained in a separate private repository.
 
-- `release.published` rebuilds both pointers from the highest immutable
-  prerelease/stable SemVer, validates signed assets, and rejects an older event
-  before deploying the Pages artifact. The organization-wide read-only
-  workflow-token policy is therefore preserved.
-- Stable releases update the branded page at
-  `https://updates.bmdl.bio/raw-data-register/`.
-- Prereleases update only the pilot feed and are not shown on the student
-  download page.
+- `release.published` first stages the newest immutable release on `pilot.json`,
+  validates the exact signed asset set, and rejects an older event. The
+  organization-wide read-only workflow-token policy is preserved.
+- Prereleases stop at the pilot feed and are not shown on the student download
+  page.
+- A normal release waits behind the protected `stable-promotion` environment.
+  After PI/admin approval, the exact same immutable assets advance `stable.json`
+  and the branded student page. Successful environment deployments are the
+  durable approval record used by later catalog rebuilds. Self-review is
+  disabled on this environment.
 - Published release assets are treated as immutable. A correction is always a
   higher patch release; channel pointers never downgrade.
 

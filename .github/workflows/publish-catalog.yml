@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  deployments: read
   pages: write
   id-token: write
 
@@ -14,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
+  stage-pilot:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -26,15 +27,28 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Select monotonic channel releases
+      - name: Read durable stable approvals
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          : > approved-stable-tags.txt
+          gh api --paginate "repos/${{ github.repository }}/deployments?environment=stable-promotion&per_page=100" \
+            --jq '.[] | [.id, .ref] | @tsv' |
+          while IFS=$'\t' read -r deployment_id release_tag; do
+            release_tag="${release_tag#refs/tags/}"
+            state="$(gh api "repos/${{ github.repository }}/deployments/${deployment_id}/statuses?per_page=1" --jq '.[0].state // ""')"
+            if [[ "$state" == "success" ]]; then printf '%s\n' "$release_tag" >> approved-stable-tags.txt; fi
+          done
+          sort -u approved-stable-tags.txt -o approved-stable-tags.txt
+      - name: Select monotonic pilot and last-approved stable releases
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_EVENT_TAG: ${{ github.event.release.tag_name }}
-          RELEASE_EVENT_PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
           gh release list --limit 100 --json tagName,isDraft,isPrerelease,publishedAt > release-list.json
           node scripts/select-channel-releases.mjs
-      - name: Rebuild both channel pointers from immutable releases
+      - name: Stage newest release on pilot without advancing stable
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -45,7 +59,73 @@ jobs:
             event="release-event-${channel}.json"
             gh release download "$tag" --dir "$assets"
             gh api "repos/${{ github.repository }}/releases/tags/${tag}" | jq '{release: .}' > "$event"
-            GITHUB_EVENT_PATH="$event" RELEASE_ASSETS_DIR="$assets" RELEASE_SITE_DIR="site/raw-data-register" node scripts/publish-release.mjs
+            GITHUB_EVENT_PATH="$event" RELEASE_ASSETS_DIR="$assets" RELEASE_SITE_DIR="site/raw-data-register" RELEASE_CHANNEL_OVERRIDE="$channel" node scripts/publish-release.mjs
+          done
+      - run: npm test
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  approve-stable:
+    if: ${{ !github.event.release.prerelease }}
+    needs: stage-pilot
+    runs-on: ubuntu-latest
+    environment: stable-promotion
+    steps:
+      - name: Record PI/admin approval for this immutable release
+        run: 'true'
+
+  publish-stable:
+    if: ${{ needs.approve-stable.result == 'success' }}
+    needs: [stage-pilot, approve-stable]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Read stable approvals including this release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          : > approved-stable-tags.txt
+          gh api --paginate "repos/${{ github.repository }}/deployments?environment=stable-promotion&per_page=100" \
+            --jq '.[] | [.id, .ref] | @tsv' |
+          while IFS=$'\t' read -r deployment_id release_tag; do
+            release_tag="${release_tag#refs/tags/}"
+            state="$(gh api "repos/${{ github.repository }}/deployments/${deployment_id}/statuses?per_page=1" --jq '.[0].state // ""')"
+            if [[ "$state" == "success" ]]; then printf '%s\n' "$release_tag" >> approved-stable-tags.txt; fi
+          done
+          sort -u approved-stable-tags.txt -o approved-stable-tags.txt
+      - name: Select approved monotonic channel releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_EVENT_TAG: ${{ github.event.release.tag_name }}
+          REQUIRE_STABLE_EVENT: "true"
+        run: |
+          gh release list --limit 100 --json tagName,isDraft,isPrerelease,publishedAt > release-list.json
+          node scripts/select-channel-releases.mjs
+      - name: Promote the tested immutable release to stable
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for channel in pilot stable; do
+            tag="$(jq -r ".${channel} // empty" selected-releases.json)"
+            if [[ -z "$tag" ]]; then continue; fi
+            assets="release-assets-${channel}"
+            event="release-event-${channel}.json"
+            gh release download "$tag" --dir "$assets"
+            gh api "repos/${{ github.repository }}/releases/tags/${tag}" | jq '{release: .}' > "$event"
+            GITHUB_EVENT_PATH="$event" RELEASE_ASSETS_DIR="$assets" RELEASE_SITE_DIR="site/raw-data-register" RELEASE_CHANNEL_OVERRIDE="$channel" node scripts/publish-release.mjs
           done
       - run: npm test
       - uses: actions/configure-pages@v5
