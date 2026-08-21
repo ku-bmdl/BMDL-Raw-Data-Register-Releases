@@ -12,7 +12,8 @@ Application source code is maintained in a separate private repository.
   After PI/admin approval, the exact same immutable assets advance `stable.json`
   and the branded student page. Successful environment deployments are the
   durable approval record used by later catalog rebuilds. Self-review is
-  disabled on this environment.
+  disabled and administrators cannot bypass the gate. Keep a second authorized
+  reviewer configured when the release publisher is also a reviewer.
 - Published release assets are treated as immutable. A correction is always a
   higher patch release; channel pointers never downgrade.
 
