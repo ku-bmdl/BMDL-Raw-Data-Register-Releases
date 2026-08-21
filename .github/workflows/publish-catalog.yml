@@ -5,7 +5,7 @@ on:
     types: [published]
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -23,28 +23,31 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Download the complete immutable release
+      - name: Select monotonic channel releases
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release download "${{ github.event.release.tag_name }}" --dir release-assets
-      - name: Validate signatures catalog and advance one channel
-        env:
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
-          RELEASE_ASSETS_DIR: release-assets
-          RELEASE_SITE_DIR: site/raw-data-register
-        run: node scripts/publish-release.mjs
-      - run: npm test
-      - name: Commit monotonic channel pointer
+          RELEASE_EVENT_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_EVENT_PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
-          git config user.name "bmdl-release-bot"
-          git config user.email "lbeker@ku.edu.tr"
-          git add -A site/raw-data-register
-          git commit -m "catalog: publish ${{ github.event.release.tag_name }}"
-          git push origin HEAD:main
+          gh release list --limit 100 --json tagName,isDraft,isPrerelease,publishedAt > release-list.json
+          node scripts/select-channel-releases.mjs
+      - name: Rebuild both channel pointers from immutable releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for channel in pilot stable; do
+            tag="$(jq -r ".${channel} // empty" selected-releases.json)"
+            if [[ -z "$tag" ]]; then continue; fi
+            assets="release-assets-${channel}"
+            event="release-event-${channel}.json"
+            gh release download "$tag" --dir "$assets"
+            gh api "repos/${{ github.repository }}/releases/tags/${tag}" | jq '{release: .}' > "$event"
+            GITHUB_EVENT_PATH="$event" RELEASE_ASSETS_DIR="$assets" RELEASE_SITE_DIR="site/raw-data-register" node scripts/publish-release.mjs
+          done
+      - run: npm test
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

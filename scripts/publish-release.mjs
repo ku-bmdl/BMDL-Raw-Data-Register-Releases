@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 
 const applicationId = "edu.ku.bmdl.raw-data-register";
@@ -74,6 +74,16 @@ function validateFeed(feed, tag) {
 }
 
 function validateChecksums(assetsDir, manifest) {
+  const expectedNames = [
+    ...(manifest.artifacts || []).map(artifact => basename(artifact.name)),
+    "SHA256SUMS.txt",
+    "release-manifest.json",
+    "tauri-update.json",
+  ].sort();
+  const actualNames = readdirSync(assetsDir).sort();
+  if (JSON.stringify(actualNames) !== JSON.stringify(expectedNames)) {
+    throw new Error("Published release contains a missing or unexpected asset.");
+  }
   for (const artifact of manifest.artifacts || []) {
     const path = join(assetsDir, basename(artifact.name));
     if (!existsSync(path)) throw new Error(`Manifest asset is missing: ${artifact.name}`);
