@@ -4,6 +4,7 @@ import test from "node:test";
 
 const page = readFileSync("site/raw-data-register/index.html", "utf8");
 const runtime = readFileSync("site/raw-data-register/download.js", "utf8");
+const styles = readFileSync("site/raw-data-register/styles.css", "utf8");
 const rootPage = readFileSync("site/index.html", "utf8");
 
 test("site root directs visitors to the Raw Data Register page", () => {
@@ -29,4 +30,8 @@ test("student page reads only stable release.json and recommends without hiding 
   assert.doesNotMatch(runtime, /\.remove\(\)/);
   assert.match(runtime, /release\.downloads\.windows\.store_id/);
   assert.doesNotMatch(runtime, /windows\.sha256/);
+});
+
+test("a non-recommended platform keeps its recommendation badge hidden", () => {
+  assert.match(styles, /\.recommendation\[hidden\]\s*\{[^}]*display:\s*none\s*!important;/s);
 });
