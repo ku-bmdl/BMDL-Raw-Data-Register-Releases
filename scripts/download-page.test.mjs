@@ -7,7 +7,9 @@ const runtime = readFileSync("site/raw-data-register/download.js", "utf8");
 
 test("student page keeps both platforms, three steps, checksum context, and support visible", () => {
   assert.match(page, /Universal Mac installer/);
-  assert.match(page, /Windows x64 installer/);
+  assert.match(page, /Windows x64 · Microsoft Store/);
+  assert.match(page, /9NTVDFKS4T1C/);
+  assert.match(page, /publisher <code>leventb<\/code>/);
   assert.equal((page.match(/<li>/g) || []).length, 3);
   assert.match(page, /separate from the SHA-256 fingerprints/);
   assert.match(page, /<details>/);
@@ -19,4 +21,6 @@ test("student page reads only stable release.json and recommends without hiding 
   assert.doesNotMatch(runtime, /pilot\.json/);
   assert.match(runtime, /classList\.add\("recommended"\)/);
   assert.doesNotMatch(runtime, /\.remove\(\)/);
+  assert.match(runtime, /release\.downloads\.windows\.store_id/);
+  assert.doesNotMatch(runtime, /windows\.sha256/);
 });

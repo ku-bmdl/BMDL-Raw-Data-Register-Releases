@@ -7,7 +7,7 @@ const elements = {
   macosDownload: document.getElementById("macos-download"),
   windowsDownload: document.getElementById("windows-download"),
   macosSha: document.getElementById("macos-sha"),
-  windowsSha: document.getElementById("windows-sha"),
+  windowsStoreDetails: document.getElementById("windows-store-details"),
   technicalDetails: document.getElementById("technical-details"),
 };
 
@@ -38,7 +38,7 @@ async function loadRelease() {
     enableDownload(elements.macosDownload, release.downloads.macos.url);
     enableDownload(elements.windowsDownload, release.downloads.windows.url);
     elements.macosSha.textContent = release.downloads.macos.sha256;
-    elements.windowsSha.textContent = release.downloads.windows.sha256;
+    elements.windowsStoreDetails.textContent = `Microsoft Store · ${release.downloads.windows.store_id} · publisher ${release.downloads.windows.publisher} · package ${release.downloads.windows.package_version}`;
     elements.technicalDetails.href = release.technical_details_url;
     elements.technicalDetails.hidden = false;
   } catch {

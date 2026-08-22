@@ -3,6 +3,14 @@
 Public, binary-only distribution infrastructure for BMDL Raw Data Register.
 Application source code is maintained in a separate private repository.
 
+The public GitHub release contains the notarized macOS DMG and the two signed
+macOS Tauri updater files. Windows is distributed separately as an x64 MSIX by
+[Microsoft Store](https://apps.microsoft.com/detail/9NTVDFKS4T1C) under Store
+ID `9NTVDFKS4T1C`; Microsoft signs, hosts, and updates that package. The MSIX
+submission candidate is never attached to a public GitHub release. Each public
+release manifest must instead contain the matching certified Partner Center
+submission provenance.
+
 - `release.published` first stages the newest immutable release on `pilot.json`,
   validates the exact signed asset set, and rejects an older event. The
   organization-wide read-only workflow-token policy is preserved.

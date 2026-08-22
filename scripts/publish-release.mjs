@@ -4,7 +4,7 @@ import { basename, join } from "node:path";
 
 const applicationId = "edu.ku.bmdl.raw-data-register";
 const repository = "ku-bmdl/BMDL-Raw-Data-Register-Releases";
-const supportedPlatforms = ["darwin-aarch64", "darwin-x86_64", "windows-x86_64"];
+const supportedPlatforms = ["darwin-aarch64", "darwin-x86_64"];
 const semverPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;
 
 function releaseAssetNames(version) {
@@ -12,8 +12,6 @@ function releaseAssetNames(version) {
     dmg: `BMDL-Raw-Data-Register_${version}_universal.dmg`,
     macUpdater: `BMDL-Raw-Data-Register_${version}_universal.app.tar.gz`,
     macSignature: `BMDL-Raw-Data-Register_${version}_universal.app.tar.gz.sig`,
-    windowsUpdater: `BMDL-Raw-Data-Register_${version}_x64-setup.exe`,
-    windowsSignature: `BMDL-Raw-Data-Register_${version}_x64-setup.exe.sig`,
   };
 }
 
@@ -48,6 +46,22 @@ export function compareSemver(leftValue, rightValue) {
     return leftPart > rightPart ? 1 : -1;
   }
   return 0;
+}
+
+function expectedWindowsStorePackageVersion(applicationVersion) {
+  const parsed = parseSemver(applicationVersion);
+  if (parsed.core[0] < 1 || parsed.core[0] > 65_535 || parsed.core[1] > 65_535 || parsed.core[2] > 654) {
+    throw new Error("Application version cannot be represented as a Store package version.");
+  }
+  let order = 99;
+  if (parsed.prerelease.length) {
+    if (parsed.prerelease.length !== 2 || parsed.prerelease[0] !== "rc" || !/^\d+$/u.test(parsed.prerelease[1])) {
+      throw new Error("Store prereleases must use -rc.N.");
+    }
+    order = Number(parsed.prerelease[1]);
+    if (order < 1 || order > 98) throw new Error("Store RC number must be between 1 and 98.");
+  }
+  return `${parsed.core[0]}.${parsed.core[1]}.${parsed.core[2] * 100 + order}.0`;
 }
 
 function sha256(path) {
@@ -98,7 +112,6 @@ function validateFeed(feed, tag) {
   const expectedByPlatform = {
     "darwin-aarch64": names.macUpdater,
     "darwin-x86_64": names.macUpdater,
-    "windows-x86_64": names.windowsUpdater,
   };
   for (const [platform, artifact] of Object.entries(feed.platforms)) {
     const url = new URL(artifact.url);
@@ -184,11 +197,27 @@ export function publishRelease({ event, assetsDir, siteDir, channelOverride = nu
     || JSON.stringify(manifest.supported_manifest_schema_versions) !== JSON.stringify(["1.0"])
     || !manifest.signing?.apple?.team_id
     || !manifest.signing?.apple?.notarization_submission_id
-    || !manifest.signing?.windows?.account
-    || !manifest.signing?.windows?.profile
-    || !manifest.signing?.windows?.publisher
     || !manifest.signing?.updater?.key_id
   ) throw new Error("Release provenance or signing evidence is incomplete.");
+  const windows = manifest.distribution?.windows;
+  if (
+    windows?.type !== "microsoft_store_msix"
+    || windows.store_id !== "9NTVDFKS4T1C"
+    || windows.product_url !== "https://apps.microsoft.com/detail/9NTVDFKS4T1C"
+    || windows.package_identity_name !== "leventb.BMDLRawDataRegister"
+    || windows.package_identity_publisher !== "CN=EF6B9EC4-DC49-4498-A41D-05719C9D3681"
+    || windows.publisher_display_name !== "leventb"
+    || windows.package_family_name !== "leventb.BMDLRawDataRegister_b9aqxvjasx2jm"
+    || windows.package_version !== expectedWindowsStorePackageVersion(feed.version)
+    || windows.certification?.status !== "certified"
+    || !windows.certification?.submission_id
+    || Number.isNaN(Date.parse(windows.certification?.certified_at))
+    || Date.parse(windows.certification.certified_at) > Date.parse(manifest.built_at)
+    || windows.submitted_candidate?.name !== `BMDL-Raw-Data-Register_${feed.version}_x64.msix`
+    || !/^[0-9a-f]{64}$/u.test(String(windows.submitted_candidate?.sha256 || ""))
+    || !Number.isSafeInteger(windows.submitted_candidate?.size_bytes)
+    || windows.submitted_candidate.size_bytes < 1
+  ) throw new Error("Certified Microsoft Store distribution provenance is incomplete or invalid.");
   const approval = validateApproval(manifest.approval);
   if (Date.parse(approval.approved_at) > Date.parse(manifest.built_at)) {
     throw new Error("Release approval must predate the finalized build metadata.");
@@ -197,7 +226,6 @@ export function publishRelease({ event, assetsDir, siteDir, channelOverride = nu
   if (
     readFileSync(join(assetsDir, names.macSignature), "utf8").trim() !== feed.platforms["darwin-aarch64"].signature
     || feed.platforms["darwin-aarch64"].signature !== feed.platforms["darwin-x86_64"].signature
-    || readFileSync(join(assetsDir, names.windowsSignature), "utf8").trim() !== feed.platforms["windows-x86_64"].signature
   ) throw new Error("Updater feed signatures do not match the immutable signature assets.");
   if (channel === "stable" && feed.version.includes("-")) {
     throw new Error("A prerelease version cannot advance the stable channel.");
@@ -216,8 +244,7 @@ export function publishRelease({ event, assetsDir, siteDir, channelOverride = nu
   if (channel === "stable") {
     const artifacts = Object.fromEntries(manifest.artifacts.map(artifact => [artifact.name, artifact]));
     const dmgName = Object.keys(artifacts).find(name => name.endsWith("_universal.dmg"));
-    const windowsName = Object.keys(artifacts).find(name => name.endsWith("_x64-setup.exe"));
-    if (!dmgName || !windowsName) throw new Error("Stable release is missing a manual installer.");
+    if (!dmgName) throw new Error("Stable release is missing the manual macOS installer.");
     const base = `https://github.com/${repository}/releases/download/${tag}`;
     const catalog = {
       version: feed.version,
@@ -225,7 +252,13 @@ export function publishRelease({ event, assetsDir, siteDir, channelOverride = nu
       notes: feed.notes || "",
       downloads: {
         macos: { url: `${base}/${dmgName}`, sha256: artifacts[dmgName].sha256 },
-        windows: { url: `${base}/${windowsName}`, sha256: artifacts[windowsName].sha256 },
+        windows: {
+          url: windows.product_url,
+          store_id: windows.store_id,
+          publisher: windows.publisher_display_name,
+          package_version: windows.package_version,
+          certification_status: windows.certification.status,
+        },
       },
       technical_details_url: `https://github.com/${repository}/releases/tag/${tag}`,
     };
