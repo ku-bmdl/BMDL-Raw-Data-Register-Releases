@@ -36,6 +36,7 @@ section > header h2 { margin: 0 0 14px; font-size: clamp(25px, 3vw, 38px); lette
 .download-card + .download-card { border-left: 0; }
 .download-card.recommended { background: #fff; box-shadow: inset 0 4px 0 var(--crimson); }
 .recommendation { display: inline-block; padding: 5px 8px; background: var(--oxblood); color: #fff; font: 700 9px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .06em; text-transform: uppercase; }
+.recommendation[hidden] { display: none !important; }
 .platform { margin: 40px 0 8px; }
 .download-card h3 { margin: 0; font-size: 25px; }
 .download-card p:not(.platform) { min-height: 72px; color: var(--muted); line-height: 1.55; }
