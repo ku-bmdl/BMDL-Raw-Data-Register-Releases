@@ -39,9 +39,9 @@
           <article id="windows-card" class="download-card" data-platform="windows">
             <span class="recommendation" hidden>Recommended for this computer</span>
             <p class="platform">Windows</p>
-            <h3>Windows x64 installer</h3>
-            <p>For Windows 10 and Windows 11 x64. Authenticode signed by the verified publisher.</p>
-            <a id="windows-download" class="download-button disabled" aria-disabled="true">DOWNLOAD EXE</a>
+            <h3>Windows x64 · Microsoft Store</h3>
+            <p>For Windows 10 and Windows 11 x64. Signed, delivered, and updated by Microsoft Store.</p>
+            <a id="windows-download" class="download-button disabled" aria-disabled="true">OPEN MICROSOFT STORE</a>
           </article>
         </div>
       </section>
@@ -49,20 +49,20 @@
       <section class="instructions" aria-labelledby="install-title">
         <header><p class="section-number">02</p><h2 id="install-title">Install in three steps</h2></header>
         <ol>
-          <li><strong>Download the correct installer.</strong><span>Keep both platform options visible when helping another lab member.</span></li>
-          <li><strong>Verify the publisher prompt.</strong><span>macOS should identify the notarized Developer ID app; Windows should show the approved institutional publisher.</span></li>
+          <li><strong>Choose the correct platform.</strong><span>Download the Mac DMG or open the official Windows product in Microsoft Store. Keep both options visible when helping another lab member.</span></li>
+          <li><strong>Verify the distribution source.</strong><span>macOS should identify the notarized Developer ID app. On Windows, confirm Store ID <code>9NTVDFKS4T1C</code> and publisher <code>leventb</code>.</span></li>
           <li><strong>Open the application.</strong><span>Configure the instrument once. Registration, hashing, and export continue to work without Internet access.</span></li>
         </ol>
       </section>
 
       <section class="integrity" aria-labelledby="integrity-title">
         <header><p class="section-number">03</p><h2 id="integrity-title">Installer integrity</h2></header>
-        <p>The installer checksum confirms the downloaded application package. It is separate from the SHA-256 fingerprints that Raw Data Register creates for research files; an installer checksum makes no scientific claim about raw data.</p>
+        <p>The Mac installer checksum confirms the downloaded DMG; Windows package integrity is enforced by Microsoft Store signing. Both are separate from the SHA-256 fingerprints that Raw Data Register creates for research files, and neither makes a scientific claim about raw data.</p>
         <details>
           <summary>Show checksums and technical details</summary>
           <dl>
             <div><dt>macOS DMG · SHA-256</dt><dd><code id="macos-sha">Unavailable</code></dd></div>
-            <div><dt>Windows EXE · SHA-256</dt><dd><code id="windows-sha">Unavailable</code></dd></div>
+            <div><dt>Windows distribution</dt><dd><code id="windows-store-details">Microsoft Store · 9NTVDFKS4T1C</code></dd></div>
           </dl>
           <a id="technical-details" class="technical-link" hidden>Open signed release details ↗</a>
         </details>

@@ -31,17 +31,24 @@ test("invalid or partial versions are rejected", () => {
   }
 });
 
-test("public promotion requires distinct release approver and operator evidence", () => {
+test("pilot accepts single-operator evidence while stable requires an independent approver", () => {
   const approval = {
-    approved_by: "pi-reviewer",
+    approved_by: "release-operator",
     approved_at: "2026-08-20T10:00:00.000Z",
     reference: "https://github.com/ku-bmdl/private-release-approvals/issues/17",
     release_operator: "release-operator",
   };
   assert.equal(validateApproval(approval), approval);
   assert.throws(
-    () => validateApproval({ ...approval, release_operator: "PI-REVIEWER" }),
+    () => validateApproval(approval, { requireIndependent: true }),
     /approval evidence/,
+  );
+  assert.equal(
+    validateApproval(
+      { ...approval, approved_by: "stable-reviewer" },
+      { requireIndependent: true },
+    ).approved_by,
+    "stable-reviewer",
   );
   assert.throws(
     () => validateApproval({ ...approval, reference: "http://example.com/17" }),
@@ -60,8 +67,6 @@ test("a verified stable build can be staged on pilot then promoted unchanged", (
     `BMDL-Raw-Data-Register_${version}_universal.dmg`,
     `BMDL-Raw-Data-Register_${version}_universal.app.tar.gz`,
     `BMDL-Raw-Data-Register_${version}_universal.app.tar.gz.sig`,
-    `BMDL-Raw-Data-Register_${version}_x64-setup.exe`,
-    `BMDL-Raw-Data-Register_${version}_x64-setup.exe.sig`,
   ];
   for (const name of names) writeFileSync(join(assetsDir, name), name.endsWith(".sig") ? "signature\n" : `bytes:${name}`);
   const base = `https://github.com/ku-bmdl/BMDL-Raw-Data-Register-Releases/releases/download/${tag}`;
@@ -72,7 +77,6 @@ test("a verified stable build can be staged on pilot then promoted unchanged", (
     platforms: {
       "darwin-aarch64": { url: `${base}/${names[1]}`, signature: "signature" },
       "darwin-x86_64": { url: `${base}/${names[1]}`, signature: "signature" },
-      "windows-x86_64": { url: `${base}/${names[3]}`, signature: "signature" },
     },
   };
   const manifest = {
@@ -90,8 +94,29 @@ test("a verified stable build can be staged on pilot then promoted unchanged", (
     })),
     signing: {
       apple: { team_id: "TEAM", notarization_submission_id: "submission" },
-      windows: { account: "account", profile: "profile", publisher: "publisher" },
       updater: { key_id: "key" },
+    },
+    distribution: {
+      windows: {
+        type: "microsoft_store_msix",
+        store_id: "9NTVDFKS4T1C",
+        product_url: "https://apps.microsoft.com/detail/9NTVDFKS4T1C",
+        package_identity_name: "leventb.BMDLRawDataRegister",
+        package_identity_publisher: "CN=EF6B9EC4-DC49-4498-A41D-05719C9D3681",
+        publisher_display_name: "leventb",
+        package_family_name: "leventb.BMDLRawDataRegister_b9aqxvjasx2jm",
+        package_version: "1.3.99.0",
+        submitted_candidate: {
+          name: `BMDL-Raw-Data-Register_${version}_x64.msix`,
+          size_bytes: 12345,
+          sha256: "b".repeat(64),
+        },
+        certification: {
+          submission_id: "submission-12345",
+          certified_at: "2026-08-31T10:00:00.000Z",
+          status: "certified",
+        },
+      },
     },
     approval: {
       approved_by: "pi-reviewer",
@@ -123,6 +148,11 @@ test("a verified stable build can be staged on pilot then promoted unchanged", (
       { channel: "stable", version },
     );
     assert.equal(JSON.parse(readFileSync(join(siteDir, "stable.json"), "utf8")).version, version);
+    const catalog = JSON.parse(readFileSync(join(siteDir, "release.json"), "utf8"));
+    assert.equal(catalog.downloads.windows.url, "https://apps.microsoft.com/detail/9NTVDFKS4T1C");
+    assert.equal(catalog.downloads.windows.store_id, "9NTVDFKS4T1C");
+    assert.equal(catalog.downloads.windows.certification_status, "certified");
+    assert.equal(catalog.downloads.windows.sha256, undefined);
     writeFileSync(join(assetsDir, "unexpected.bin"), "unexpected");
     assert.throws(
       () => publishRelease({ event, assetsDir, siteDir: join(root, "other"), channelOverride: "stable" }),
