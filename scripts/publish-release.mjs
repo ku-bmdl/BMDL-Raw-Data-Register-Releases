@@ -58,6 +58,30 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
+export function validateApproval(approval) {
+  const approvedBy = String(approval?.approved_by || "").trim();
+  const releaseOperator = String(approval?.release_operator || "").trim();
+  const approvedAt = Date.parse(String(approval?.approved_at || ""));
+  const githubLoginPattern = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/u;
+  let reference;
+  try {
+    reference = new URL(String(approval?.reference || ""));
+  } catch {
+    throw new Error("Release approval evidence is incomplete or invalid.");
+  }
+  if (
+    !githubLoginPattern.test(approvedBy)
+    || !githubLoginPattern.test(releaseOperator)
+    || approvedBy.toLocaleLowerCase("en-US") === releaseOperator.toLocaleLowerCase("en-US")
+    || !Number.isFinite(approvedAt)
+    || approvedAt > Date.now() + 5 * 60 * 1_000
+    || reference.protocol !== "https:"
+    || reference.hostname !== "github.com"
+    || !/^\/[^/]+\/[^/]+\/(?:issues|pull)\/\d+(?:\/.*)?$/u.test(reference.pathname)
+  ) throw new Error("Release approval evidence is incomplete or invalid.");
+  return approval;
+}
+
 function validateFeed(feed, tag) {
   parseSemver(feed.version);
   if (feed.notes != null && (typeof feed.notes !== "string" || feed.notes.length > 2_000)) {
@@ -165,6 +189,10 @@ export function publishRelease({ event, assetsDir, siteDir, channelOverride = nu
     || !manifest.signing?.windows?.publisher
     || !manifest.signing?.updater?.key_id
   ) throw new Error("Release provenance or signing evidence is incomplete.");
+  const approval = validateApproval(manifest.approval);
+  if (Date.parse(approval.approved_at) > Date.parse(manifest.built_at)) {
+    throw new Error("Release approval must predate the finalized build metadata.");
+  }
   const names = releaseAssetNames(feed.version);
   if (
     readFileSync(join(assetsDir, names.macSignature), "utf8").trim() !== feed.platforms["darwin-aarch64"].signature

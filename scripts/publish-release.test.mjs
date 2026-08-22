@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { compareSemver, parseSemver, publishRelease } from "./publish-release.mjs";
+import { compareSemver, parseSemver, publishRelease, validateApproval } from "./publish-release.mjs";
 
 function sha256(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
@@ -29,6 +29,24 @@ test("invalid or partial versions are rejected", () => {
   for (const value of ["latest", "1.3", "01.3.0", "v1.3.0"]) {
     assert.throws(() => parseSemver(value), /Invalid SemVer/);
   }
+});
+
+test("public promotion requires distinct release approver and operator evidence", () => {
+  const approval = {
+    approved_by: "pi-reviewer",
+    approved_at: "2026-08-20T10:00:00.000Z",
+    reference: "https://github.com/ku-bmdl/private-release-approvals/issues/17",
+    release_operator: "release-operator",
+  };
+  assert.equal(validateApproval(approval), approval);
+  assert.throws(
+    () => validateApproval({ ...approval, release_operator: "PI-REVIEWER" }),
+    /approval evidence/,
+  );
+  assert.throws(
+    () => validateApproval({ ...approval, reference: "http://example.com/17" }),
+    /approval evidence/,
+  );
 });
 
 test("a verified stable build can be staged on pilot then promoted unchanged", () => {
@@ -74,6 +92,12 @@ test("a verified stable build can be staged on pilot then promoted unchanged", (
       apple: { team_id: "TEAM", notarization_submission_id: "submission" },
       windows: { account: "account", profile: "profile", publisher: "publisher" },
       updater: { key_id: "key" },
+    },
+    approval: {
+      approved_by: "pi-reviewer",
+      approved_at: "2026-08-20T10:00:00.000Z",
+      reference: "https://github.com/ku-bmdl/private-release-approvals/issues/17",
+      release_operator: "release-operator",
     },
     release_status: "verified",
   };
