@@ -4,6 +4,12 @@ import test from "node:test";
 
 const page = readFileSync("site/raw-data-register/index.html", "utf8");
 const runtime = readFileSync("site/raw-data-register/download.js", "utf8");
+const rootPage = readFileSync("site/index.html", "utf8");
+
+test("site root directs visitors to the Raw Data Register page", () => {
+  assert.match(rootPage, /url=raw-data-register\//);
+  assert.match(rootPage, /https:\/\/updates\.bmdl\.bio\/raw-data-register\//);
+});
 
 test("student page keeps both platforms, three steps, checksum context, and support visible", () => {
   assert.match(page, /Universal Mac installer/);
