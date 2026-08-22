@@ -24,8 +24,9 @@ submission provenance.
   reviewer configured when the release publisher is also a reviewer.
 - Published release assets are treated as immutable. A correction is always a
   higher patch release; channel pointers never downgrade.
-- Every manifest must include a GitHub evidence URL and name two distinct
-  people as release approver and controlled-host release operator.
+- Every manifest must include a GitHub evidence URL and a named controlled-host
+  release operator. Pilot manifests may name that operator as approver; stable
+  manifests must name a different approver.
 
 DNS must point `updates.bmdl.bio` to GitHub Pages and HTTPS enforcement must
 remain enabled.

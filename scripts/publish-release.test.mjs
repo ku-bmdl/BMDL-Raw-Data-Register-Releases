@@ -31,17 +31,24 @@ test("invalid or partial versions are rejected", () => {
   }
 });
 
-test("public promotion requires distinct release approver and operator evidence", () => {
+test("pilot accepts single-operator evidence while stable requires an independent approver", () => {
   const approval = {
-    approved_by: "pi-reviewer",
+    approved_by: "release-operator",
     approved_at: "2026-08-20T10:00:00.000Z",
     reference: "https://github.com/ku-bmdl/private-release-approvals/issues/17",
     release_operator: "release-operator",
   };
   assert.equal(validateApproval(approval), approval);
   assert.throws(
-    () => validateApproval({ ...approval, release_operator: "PI-REVIEWER" }),
+    () => validateApproval(approval, { requireIndependent: true }),
     /approval evidence/,
+  );
+  assert.equal(
+    validateApproval(
+      { ...approval, approved_by: "stable-reviewer" },
+      { requireIndependent: true },
+    ).approved_by,
+    "stable-reviewer",
   );
   assert.throws(
     () => validateApproval({ ...approval, reference: "http://example.com/17" }),

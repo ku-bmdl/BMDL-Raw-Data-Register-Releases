@@ -72,7 +72,7 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
-export function validateApproval(approval) {
+export function validateApproval(approval, { requireIndependent = false } = {}) {
   const approvedBy = String(approval?.approved_by || "").trim();
   const releaseOperator = String(approval?.release_operator || "").trim();
   const approvedAt = Date.parse(String(approval?.approved_at || ""));
@@ -86,7 +86,10 @@ export function validateApproval(approval) {
   if (
     !githubLoginPattern.test(approvedBy)
     || !githubLoginPattern.test(releaseOperator)
-    || approvedBy.toLocaleLowerCase("en-US") === releaseOperator.toLocaleLowerCase("en-US")
+    || (
+      requireIndependent
+      && approvedBy.toLocaleLowerCase("en-US") === releaseOperator.toLocaleLowerCase("en-US")
+    )
     || !Number.isFinite(approvedAt)
     || approvedAt > Date.now() + 5 * 60 * 1_000
     || reference.protocol !== "https:"
@@ -218,7 +221,9 @@ export function publishRelease({ event, assetsDir, siteDir, channelOverride = nu
     || !Number.isSafeInteger(windows.submitted_candidate?.size_bytes)
     || windows.submitted_candidate.size_bytes < 1
   ) throw new Error("Certified Microsoft Store distribution provenance is incomplete or invalid.");
-  const approval = validateApproval(manifest.approval);
+  const approval = validateApproval(manifest.approval, {
+    requireIndependent: releaseChannel === "stable",
+  });
   if (Date.parse(approval.approved_at) > Date.parse(manifest.built_at)) {
     throw new Error("Release approval must predate the finalized build metadata.");
   }
