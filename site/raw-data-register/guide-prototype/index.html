@@ -1,0 +1,141 @@
+<!doctype html>
+<!--
+  PROTOTYPE — do not publish as the final student guide.
+  Question: which of three structures makes the registered-RAW submission
+  workflow easiest for a first-time student to understand?
+  Switch with ?variant=cards, ?variant=wizard, or ?variant=map.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta name="description" content="Prototype of a three-step guide for registering and submitting BMDL raw data.">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
+    <title>BMDL · Three-step registered RAW guide prototype</title>
+    <link rel="stylesheet" href="guide.css">
+    <script type="module" src="guide.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="../">
+        <strong>BMDL</strong>
+        <span>Raw Data Register</span>
+      </a>
+      <div class="prototype-mark">
+        <strong>PROTOTYPE</strong>
+        <span>Not the live submission system</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">Student field guide · Registered RAW</p>
+        <h1 id="page-title">Three steps. One receipt.</h1>
+        <p class="lede">Register each coherent data set, add every package that belongs to the Experiment, then review and submit. This page guides you; it never reads or uploads your files.</p>
+        <div class="global-rail" aria-label="Three-step registered RAW submission">
+          <span><b>1</b><strong>Register</strong></span>
+          <i aria-hidden="true">→</i>
+          <span><b>2</b><strong>Add data</strong></span>
+          <i aria-hidden="true">→</i>
+          <span><b>3</b><strong>Review &amp; submit</strong></span>
+        </div>
+      </section>
+
+      <section class="prototype-context" aria-labelledby="prototype-title">
+        <div>
+          <p class="eyebrow">Design comparison</p>
+          <h2 id="prototype-title">Same rules, three different structures</h2>
+        </div>
+        <p>Use the floating arrows or your keyboard’s left/right arrow keys. The selected variant stays in the URL so the exact view can be shared for review.</p>
+      </section>
+
+      <section id="variant-cards" class="variant" data-variant="cards" hidden aria-labelledby="cards-title">
+        <header class="variant-heading">
+          <p class="variant-letter">A</p>
+          <div><p class="eyebrow">Linear cards</p><h2 id="cards-title">See the whole journey at once</h2></div>
+        </header>
+        <div id="cards-root"></div>
+      </section>
+
+      <section id="variant-wizard" class="variant" data-variant="wizard" hidden aria-labelledby="wizard-title">
+        <header class="variant-heading">
+          <p class="variant-letter">B</p>
+          <div><p class="eyebrow">Guided wizard</p><h2 id="wizard-title">Answer one decision at a time</h2></div>
+        </header>
+        <div class="wizard-shell">
+          <div class="wizard-progress">
+            <span id="wizard-step-label">Step 1 of 3 · Register</span>
+            <progress id="wizard-progress" max="3" value="1">1 of 3</progress>
+          </div>
+          <div id="wizard-root" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="variant-map" class="variant" data-variant="map" hidden aria-labelledby="map-title">
+        <header class="variant-heading">
+          <p class="variant-letter">C</p>
+          <div><p class="eyebrow">Interactive map</p><h2 id="map-title">Start where you are</h2></div>
+        </header>
+        <div class="map-layout">
+          <div id="map-root" class="journey-map" aria-label="Interactive registered RAW journey map"></div>
+          <aside id="map-detail" class="map-detail" aria-live="polite"></aside>
+        </div>
+      </section>
+
+      <section class="stuck" aria-labelledby="stuck-title">
+        <div>
+          <p class="eyebrow">Fast recovery</p>
+          <h2 id="stuck-title">I’m stuck. What do I do?</h2>
+        </div>
+        <div class="stuck-layout">
+          <div class="stuck-choices" role="list" aria-label="Common problems">
+            <button type="button" data-stuck="writing">The instrument is still writing</button>
+            <button type="button" data-stuck="no-id">I do not have an Experiment ID</button>
+            <button type="button" data-stuck="facility">The files came from a facility</button>
+            <button type="button" data-stuck="upload">My package will not upload</button>
+            <button type="button" data-stuck="receipt">I do not see a Slack receipt</button>
+          </div>
+          <div id="stuck-answer" class="stuck-answer" aria-live="polite">
+            <strong>Choose what you see.</strong>
+            <p>The guide will point to the next safe action. It will not inspect your computer.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="faq" aria-labelledby="faq-title">
+        <header>
+          <p class="eyebrow">Plain-language Q&amp;A</p>
+          <h2 id="faq-title">Questions students are likely to ask</h2>
+        </header>
+        <div id="faq-root"></div>
+      </section>
+
+      <noscript>
+        <section class="noscript-guide">
+          <h2>Three-step registered RAW guide</h2>
+          <ol>
+            <li><strong>Register.</strong> Wait for file writing to finish. Register promptly on the instrument computer, or register an unchanged facility delivery immediately after receipt.</li>
+            <li><strong>Add data.</strong> Prepare, upload, verify and explain one complete CAP package. Choose Add another registered package when more data belongs to the Experiment.</li>
+            <li><strong>Review and submit.</strong> Check every data-set card, submit the final review and keep the Slack receipt.</li>
+          </ol>
+          <p>One Capture requires one Experiment, one source and acquisition session, and one coherent data set that you would explain together.</p>
+        </section>
+      </noscript>
+    </main>
+
+    <div id="prototype-switcher" class="prototype-switcher" aria-label="Prototype variant switcher">
+      <button id="previous-variant" type="button" aria-label="Previous prototype variant">←</button>
+      <div>
+        <strong id="variant-label">B — Guided wizard</strong>
+        <span id="prototype-state">Variant B · Wizard screen: source</span>
+      </div>
+      <button id="next-variant" type="button" aria-label="Next prototype variant">→</button>
+    </div>
+
+    <footer>
+      <span>Prototype for visual review only</span>
+      <a href="mailto:lbeker@ku.edu.tr">lbeker@ku.edu.tr</a>
+    </footer>
+  </body>
+</html>
