@@ -1,14 +1,14 @@
 const VARIANTS = [
   {id: "journey", key: "C1", name: "Guided journey"},
-  {id: "hub", key: "C2", name: "Experiment hub"},
+  {id: "hub", key: "C2", name: "Growing flow map"},
 ];
 
 const params = new URLSearchParams(window.location.search);
 let currentVariant = VARIANTS.some(item => item.id === params.get("variant"))
   ? params.get("variant")
   : "journey";
-let selectedDetail = {journey: "register", hub: "experiment"};
 let contract;
+let flowState = createFlowState();
 
 const escapeHtml = value => String(value ?? "")
   .replaceAll("&", "&amp;")
@@ -16,133 +16,476 @@ const escapeHtml = value => String(value ?? "")
   .replaceAll(">", "&gt;")
   .replaceAll('"', "&quot;");
 
-function source(id) {
-  return contract.source_paths.find(item => item.id === id);
+function createFlowState() {
+  return {
+    dataset: 1,
+    history: [],
+    completedDatasets: [],
+    source: null,
+    ready: null,
+    idKnown: null,
+    idCreated: false,
+    captureAnswers: [null, null, null],
+    captureNeedsSplit: false,
+    registered: false,
+    exported: false,
+    uploaded: false,
+    explained: false,
+    moreData: null,
+    submitted: false,
+  };
 }
 
 function checkpoint(id) {
   return contract.verification_checkpoints.find(item => item.id === id);
 }
 
-function checkpointBadge(id, compact = false) {
-  const item = checkpoint(id);
-  return [
-    '<span class="checkpoint-badge', compact ? ' compact' : '', '">',
-    '<b aria-hidden="true">✓</b>',
-    '<span><strong>', escapeHtml(item.label), '</strong>',
-    '<small>', escapeHtml(item.complete_when), '</small></span>',
-    '</span>',
-  ].join("");
+function option(value, label, detail = "", tone = "") {
+  return {value, label, detail, tone};
 }
 
-function arrow(label = "") {
-  return [
-    '<span class="flow-arrow" aria-hidden="true">',
-    label ? '<small>' + escapeHtml(label) + '</small>' : '',
-    '<b>→</b></span>',
-  ].join("");
-}
+function currentStep() {
+  const state = flowState;
+  const dataLabel = "Data set " + String(state.dataset).padStart(2, "0");
 
-function detailButton(key, className, title, body) {
-  return [
-    '<button class="', className, '" type="button" data-detail="', key, '">',
-    '<strong>', escapeHtml(title), '</strong>',
-    body ? '<span>' + escapeHtml(body) + '</span>' : '',
-    '</button>',
-  ].join("");
-}
+  if (!state.source) {
+    return {
+      id: "source",
+      stage: 1,
+      eyebrow: dataLabel + " · Start here",
+      question: "Where did these files come from?",
+      help: "Choose the computer or facility that produced the unchanged original files.",
+      options: [
+        option("local", "LAB / OWN COMPUTER", "Instrument, custom board or software recorded them here."),
+        option("facility", "SHARED FACILITY", "The facility delivered the original files to you."),
+      ],
+    };
+  }
 
-function detailItems() {
-  const facility = contract.facility_transfer;
-  const experimentId = contract.experiment_id_decision;
-  return {
-    "source-lab": {
-      index: "STAGE 1 · SOURCE A",
-      title: source("lab_instrument").label,
-      body: source("lab_instrument").instruction,
-      proof: "Continue only after recording and file writing have stopped.",
-    },
-    "source-facility": {
-      index: "STAGE 1 · SOURCE B",
-      title: source("shared_facility").label,
-      body: facility.operations.join(" → "),
-      proof: facility.assurance_boundary,
-    },
-    "experiment-known": {
-      index: "STAGE 1 · EXPERIMENT ID",
-      title: "Yes — I know the ID",
-      body: experimentId.known.action,
-      proof: "The ID links this Capture to the saved LabMate Experiment record.",
-    },
-    "experiment-unknown": {
-      index: "STAGE 1 · EXPERIMENT ID",
-      title: "No — register now",
-      body: experimentId.unknown.registration_action + " Before upload: " +
-        experimentId.unknown.before_web_upload.join(" "),
-      proof: experimentId.not_equivalent,
-    },
-    "capture-gate": {
-      index: "STAGE 1 · THREE YES GATE",
-      title: "One coherent Capture",
-      body: contract.capture_boundary.all_required.join(" "),
-      proof: "If any answer is NO, split the selection before registration.",
-    },
-    register: {
-      index: "STAGE 1 · COMPLETE",
-      title: "Register one Capture",
-      body: "Raw Data Register hashes the unchanged selected source files and writes the Capture manifest.",
+  if (state.ready === null) {
+    const facility = state.source === "facility";
+    return {
+      id: "ready",
+      stage: 1,
+      eyebrow: dataLabel + " · Protect the original",
+      question: facility
+        ? "Are the delivered originals unchanged on your computer?"
+        : "Have recording and file writing completely stopped?",
+      help: facility
+        ? "Facility originals unchanged → copy to USB → bring to your computer → register promptly."
+        : "Register on the acquisition computer before the first copy whenever possible.",
+      options: [
+        option("yes", "YES — CONTINUE", "The original files are ready to register.", "primary"),
+        option("no", "NO — STOP HERE", "Do not register files that are still changing or have already been altered.", "stop"),
+      ],
+    };
+  }
+
+  if (state.ready === "no") {
+    return {
+      id: "ready-resume",
+      stage: 1,
+      eyebrow: dataLabel + " · Safe pause",
+      question: "Wait here. Do not change or register the files yet.",
+      help: state.source === "facility"
+        ? "Return when the unchanged facility delivery is on your computer via USB."
+        : "Return when acquisition and file writing have fully stopped.",
+      options: [option("resume", "THE FILES ARE READY NOW", "Continue with the unchanged originals.", "primary")],
+      tone: "stop",
+    };
+  }
+
+  if (state.idKnown === null) {
+    return {
+      id: "experiment-id",
+      stage: 1,
+      eyebrow: dataLabel + " · Experiment link",
+      question: "Do you know the LabMate Experiment ID?",
+      help: "You may register offline without an ID. The ID is required before browser upload.",
+      options: [
+        option("yes", "YES — I KNOW IT", "Enter the saved Experiment ID in Raw Data Register.", "primary"),
+        option("no", "NO — REGISTER WITHOUT IT", "The Slack ID step will appear before upload."),
+      ],
+    };
+  }
+
+  if (state.captureNeedsSplit) {
+    return {
+      id: "capture-split",
+      stage: 1,
+      eyebrow: dataLabel + " · Capture boundary",
+      question: "Split the selection before registration.",
+      help: "Different Experiment, source, acquisition session or scientific meaning means a separate Capture.",
+      options: [option("split", "I SEPARATED THE FILES", "Run the three checks again.", "primary")],
+      tone: "stop",
+    };
+  }
+
+  const captureIndex = state.captureAnswers.findIndex(answer => answer === null);
+  if (captureIndex >= 0) {
+    return {
+      id: "capture-" + captureIndex,
+      stage: 1,
+      eyebrow: dataLabel + " · Capture check " + (captureIndex + 1) + " of 3",
+      question: contract.capture_boundary.all_required[captureIndex],
+      help: "All three answers must be YES before these files become one Capture.",
+      options: [
+        option("yes", "YES", "This condition is true.", "primary"),
+        option("no", "NO", "Split the selection before registration.", "stop"),
+      ],
+    };
+  }
+
+  if (!state.registered) {
+    return {
+      id: "register",
+      stage: 1,
+      eyebrow: dataLabel + " · Desktop checkpoint",
+      question: "Register this Capture in Raw Data Register.",
+      help: "Hash the unchanged source files. Continue only when the desktop app shows the checkpoint below.",
       proof: checkpoint("raw_registered").label,
-    },
-    export: {
-      index: "STAGE 2 · CHECKPOINT 1",
-      title: "Export or copy one complete package",
-      body: "Choose a destination for the complete CAP folder. Raw Data Register reopens the destination and verifies its bytes.",
+      options: [option("confirmed", "I SEE RAW — REGISTERED", "Stage 1 is complete for this data set.", "primary")],
+    };
+  }
+
+  if (!state.exported) {
+    return {
+      id: "export",
+      stage: 2,
+      eyebrow: dataLabel + " · Package checkpoint",
+      question: "Export or copy one complete CAP package.",
+      help: "Use the complete outer CAP folder. Continue only after the desktop app verifies the destination bytes.",
       proof: checkpoint("local_export_verified").label,
-    },
-    upload: {
-      index: "STAGE 2 · CHECKPOINT 2",
-      title: "Choose the Experiment, upload and verify",
-      body: "Desktop or Slack opens the same secure browser uploader. Select the Experiment and the outer CAP folder; do not ZIP it.",
+      options: [option("confirmed", "I SEE LOCAL EXPORT VERIFIED", "The package is ready for browser upload.", "primary")],
+    };
+  }
+
+  if (state.idKnown === "no" && !state.idCreated) {
+    return {
+      id: "create-id",
+      stage: 2,
+      eyebrow: dataLabel + " · Required before upload",
+      question: "Create the Experiment ID in Slack now.",
+      help: "Slack Home → Record new experiment → Save & continue. Plan an experiment does not create this ID.",
+      options: [option("confirmed", "I NOW HAVE THE EXPERIMENT ID", "Use it when the uploader asks where this package belongs.", "primary")],
+    };
+  }
+
+  if (!state.uploaded) {
+    return {
+      id: "upload",
+      stage: 2,
+      eyebrow: dataLabel + " · Browser checkpoint",
+      question: "Choose the Experiment, upload and verify the package.",
+      help: "Desktop or Slack opens the same secure uploader. Select the outer CAP folder; do not ZIP it.",
       proof: checkpoint("transfer_integrity_confirmed").label,
-    },
-    explain: {
-      index: "STAGE 2 · CHECKPOINT 3",
-      title: "Explain this package",
-      body: "Save the package’s scientific meaning while its source and acquisition are clear.",
+      options: [option("confirmed", "I SEE TRANSFER INTEGRITY CONFIRMED", "The uploaded bytes match the registered fingerprints.", "primary")],
+    };
+  }
+
+  if (!state.explained) {
+    return {
+      id: "explain",
+      stage: 2,
+      eyebrow: dataLabel + " · Scientific context",
+      question: "Explain this package before adding another one.",
+      help: "Save what this coherent data set means while its source and acquisition are clear.",
       proof: checkpoint("explanation_complete").label,
-    },
-    "same-experiment": {
-      index: "STAGE 2 · REPEAT",
-      title: "Different data, same Experiment",
-      body: contract.same_experiment_multiple_data.rule + " " +
-        contract.same_experiment_multiple_data.loop,
-      proof: contract.same_experiment_multiple_data.separate_capture_when.join(" "),
-    },
-    experiment: {
-      index: "C2 · EXPERIMENT HUB",
-      title: "One LabMate Experiment",
-      body: "Raman data, fixture photographs, SEM data and other scientific sets may use the same Experiment ID.",
-      proof: "Different source, session or scientific meaning remains a separate Capture and package.",
-    },
-    review: {
-      index: "STAGE 3 · FINAL CHECK",
-      title: "Review every data-set card",
-      body: "Resolve missing explanations, answer the final Experiment questions and submit once.",
-      proof: "Final submission waits until every intended package is verified and explained.",
-    },
-    receipt: {
-      index: "STAGE 3 · COMPLETE",
-      title: "Keep the Slack receipt",
-      body: "The receipt and Receipt ID close this submission.",
+      options: [option("confirmed", "EXPLANATION COMPLETE", "This data-set card is complete.", "primary")],
+    };
+  }
+
+  if (state.moreData === null) {
+    return {
+      id: "more-data",
+      stage: 2,
+      eyebrow: dataLabel + " · Loop decision",
+      question: "Is there another registered data set for this Experiment?",
+      help: "Different source, session or scientific meaning stays in a separate Capture and package, but may use the same Experiment ID.",
+      options: [
+        option("yes", "YES — ADD ANOTHER", "Return to Stage 1 for the next data set.", "primary"),
+        option("no", "NO — FINAL REVIEW", "Continue to Stage 3."),
+      ],
+    };
+  }
+
+  if (!state.submitted) {
+    return {
+      id: "review",
+      stage: 3,
+      eyebrow: "Whole Experiment · Final check",
+      question: "Review every data-set card and submit once.",
+      help: "Resolve missing explanations, answer the final questions and wait for the Slack receipt.",
       proof: checkpoint("slack_receipt").label,
-    },
-    additional: {
-      index: "MORE DATA LATER",
-      title: "Use Additional Data",
-      body: contract.same_experiment_multiple_data.after_submission,
-      proof: "Select the same Experiment; never reopen or replace the original submission.",
-    },
+      options: [option("confirmed", "I HAVE THE SLACK RECEIPT", "Keep the Receipt ID. The submission is complete.", "primary")],
+    };
+  }
+
+  return {
+    id: "done",
+    stage: 3,
+    eyebrow: "Submission complete",
+    question: "Done — keep the Slack receipt and Receipt ID.",
+    help: "If new data arrives later, select this same Experiment and use append-only Additional Data.",
+    proof: checkpoint("slack_receipt").label,
+    options: [],
+    done: true,
   };
+}
+
+function addHistory(stage, title, answer, tone = "complete") {
+  flowState.history.push({stage, title, answer, tone, dataset: flowState.dataset});
+}
+
+function finishCurrentDataset() {
+  if (!flowState.completedDatasets.includes(flowState.dataset)) {
+    flowState.completedDatasets.push(flowState.dataset);
+  }
+}
+
+function handleChoice(value) {
+  const step = currentStep();
+  const state = flowState;
+
+  if (step.id === "source") {
+    state.source = value;
+    addHistory(1, "Source", value === "facility" ? "Shared facility" : "Lab / own computer");
+  } else if (step.id === "ready") {
+    state.ready = value;
+    addHistory(1, "Original files ready?", value === "yes" ? "YES — unchanged and ready" : "NO — wait", value === "yes" ? "complete" : "stop");
+  } else if (step.id === "ready-resume") {
+    state.ready = "yes";
+    addHistory(1, "Safe pause", "Files are ready now");
+  } else if (step.id === "experiment-id") {
+    state.idKnown = value;
+    addHistory(1, "Experiment ID known?", value === "yes" ? "YES — enter it" : "NO — create before upload");
+  } else if (step.id === "capture-split") {
+    state.captureNeedsSplit = false;
+    state.captureAnswers = [null, null, null];
+    addHistory(1, "Capture selection", "Files separated — check again");
+  } else if (step.id.startsWith("capture-")) {
+    const index = Number(step.id.split("-")[1]);
+    if (value === "no") {
+      state.captureNeedsSplit = true;
+      addHistory(1, "Capture check " + (index + 1), "NO — split the selection", "stop");
+    } else {
+      state.captureAnswers[index] = "yes";
+      addHistory(1, "Capture check " + (index + 1), "YES");
+    }
+  } else if (step.id === "register") {
+    state.registered = true;
+    addHistory(1, "Desktop registration", checkpoint("raw_registered").label);
+  } else if (step.id === "export") {
+    state.exported = true;
+    addHistory(2, "Package export", checkpoint("local_export_verified").label);
+  } else if (step.id === "create-id") {
+    state.idCreated = true;
+    state.idKnown = "yes";
+    addHistory(2, "Slack Experiment record", "Experiment ID created");
+  } else if (step.id === "upload") {
+    state.uploaded = true;
+    addHistory(2, "Browser upload", checkpoint("transfer_integrity_confirmed").label);
+  } else if (step.id === "explain") {
+    state.explained = true;
+    addHistory(2, "Package explanation", checkpoint("explanation_complete").label);
+  } else if (step.id === "more-data") {
+    finishCurrentDataset();
+    if (value === "yes") {
+      addHistory(2, "More data for this Experiment?", "YES — loop to another separate data set");
+      state.dataset += 1;
+      state.source = null;
+      state.ready = null;
+      state.captureAnswers = [null, null, null];
+      state.captureNeedsSplit = false;
+      state.registered = false;
+      state.exported = false;
+      state.uploaded = false;
+      state.explained = false;
+      state.moreData = null;
+    } else {
+      state.moreData = "no";
+      addHistory(2, "More data for this Experiment?", "NO — continue to final review");
+    }
+  } else if (step.id === "review") {
+    state.submitted = true;
+    addHistory(3, "Final review and submit", checkpoint("slack_receipt").label);
+  }
+
+  renderInteractiveFlow();
+  requestAnimationFrame(() => {
+    document.querySelector('.variant:not([hidden]) [data-current-step]')
+      ?.scrollIntoView({behavior: "smooth", block: "center"});
+  });
+}
+
+function checkpointPill(label) {
+  return '<span class="flow-proof"><b aria-hidden="true">✓</b>' + escapeHtml(label) + '</span>';
+}
+
+function renderOptions(step) {
+  if (step.done) {
+    return '<button class="restart-button" type="button" data-flow-reset>START AGAIN</button>';
+  }
+  return '<div class="flow-options">' + step.options.map(item => [
+    '<button class="flow-choice ', escapeHtml(item.tone), '" type="button" data-flow-choice="', escapeHtml(item.value), '">',
+      '<strong>', escapeHtml(item.label), '</strong>',
+      item.detail ? '<span>' + escapeHtml(item.detail) + '</span>' : '',
+    '</button>',
+  ].join("")).join("") + '</div>';
+}
+
+function renderCurrentCard(step, compact = false) {
+  return [
+    '<article class="flow-question ', compact ? 'compact ' : '', step.tone || '', '" data-current-step>',
+      '<p class="flow-kicker">STAGE ', step.stage, ' · ', escapeHtml(step.eyebrow), '</p>',
+      '<h3>', escapeHtml(step.question), '</h3>',
+      '<p class="flow-help">', escapeHtml(step.help), '</p>',
+      step.proof ? checkpointPill(step.proof) : '',
+      renderOptions(step),
+    '</article>',
+  ].join("");
+}
+
+function renderHistoryNode(item, compact = false) {
+  return [
+    '<article class="flow-history-node ', compact ? 'compact ' : '', item.tone === "stop" ? 'stopped' : '', '">',
+      '<span>DATA SET ', String(item.dataset).padStart(2, "0"), ' · STAGE ', item.stage, '</span>',
+      '<strong>', escapeHtml(item.title), '</strong>',
+      '<small>', escapeHtml(item.answer), '</small>',
+    '</article>',
+  ].join("");
+}
+
+function downArrow(label = "") {
+  return '<div class="flow-arrow-down" aria-hidden="true"><b>↓</b>' +
+    (label ? '<span>' + escapeHtml(label) + '</span>' : '') + '</div>';
+}
+
+function stageMeter(activeStage) {
+  return '<div class="interactive-stage-meter" aria-label="Three submission stages">' +
+    contract.steps.map(step => {
+      const stateClass = step.number < activeStage ? "complete" : step.number === activeStage ? "current" : "future";
+      return '<span class="' + stateClass + '"><b>' + step.number + '</b><strong>' + escapeHtml(step.label) + '</strong></span>';
+    }).join('<i aria-hidden="true">→</i>') + '</div>';
+}
+
+function flowToolbar(step) {
+  return [
+    '<div class="flow-toolbar">',
+      '<div><span>LIVE PROTOTYPE STATE</span><strong>Data set ', String(flowState.dataset).padStart(2, "0"), ' · Stage ', step.stage, '</strong></div>',
+      '<button type="button" data-flow-reset>Start over</button>',
+    '</div>',
+  ].join("");
+}
+
+function renderJourney() {
+  const step = currentStep();
+  const trail = flowState.history.map((item, index) =>
+    renderHistoryNode(item) + (index < flowState.history.length - 1 ? downArrow() : "")
+  ).join("");
+
+  document.getElementById("journey-root").innerHTML = [
+    '<div class="guided-flow">',
+      flowToolbar(step),
+      stageMeter(step.stage),
+      '<div class="guided-path" aria-live="polite">',
+        '<article class="flow-start"><span>START</span><strong>One unchanged data set</strong></article>',
+        downArrow("Answer only what you see"),
+        trail,
+        trail ? downArrow("Next appropriate step") : '',
+        renderCurrentCard(step),
+      '</div>',
+      '<p class="progress-note"><strong>', flowState.history.length, ' answers recorded in memory.</strong> Future steps stay hidden until your answer makes them relevant.</p>',
+    '</div>',
+  ].join("");
+}
+
+function experimentHubSummary() {
+  const examples = contract.same_experiment_multiple_data.examples
+    .map(item => '<span>' + escapeHtml(item) + '</span>').join("");
+  const datasets = flowState.completedDatasets
+    .map(number => '<b>✓ DATA SET ' + String(number).padStart(2, "0") + '</b>')
+    .join("");
+  return [
+    '<article class="experiment-flow-hub">',
+      '<span>ONE LABMATE EXPERIMENT</span><strong>[Experiment ID]</strong>',
+      '<small>Separate Captures and packages can all connect to this same record.</small>',
+      '<div class="hub-examples" aria-label="Example data sets">', examples, '</div>',
+      datasets ? '<div class="completed-datasets">' + datasets + '</div>' : '',
+    '</article>',
+  ].join("");
+}
+
+function renderStageLane(stageNumber, step) {
+  const stage = contract.steps.find(item => item.number === stageNumber);
+  const events = flowState.history.filter(item => item.stage === stageNumber);
+  const current = step.stage === stageNumber;
+  const nodes = [];
+
+  if (stageNumber === 2) nodes.push(experimentHubSummary());
+  events.forEach(item => nodes.push(renderHistoryNode(item, true)));
+  if (current) nodes.push(renderCurrentCard(step, true));
+
+  return [
+    '<section class="map-stage-lane ', current ? 'current' : 'complete', '" aria-label="Stage ', stageNumber, '">',
+      '<header><b>', stageNumber, '</b><div><span>STAGE ', stageNumber, '</span><strong>', escapeHtml(stage.label), '</strong></div></header>',
+      '<div class="map-node-path">',
+        nodes.map((node, index) => node + (index < nodes.length - 1 ? downArrow() : "")).join(""),
+      '</div>',
+    '</section>',
+  ].join("");
+}
+
+function renderHub() {
+  const step = currentStep();
+  const maxHistoryStage = Math.max(1, ...flowState.history.map(item => item.stage));
+  const maxStage = Math.max(step.stage, maxHistoryStage);
+  const lanes = [];
+
+  for (let stage = 1; stage <= maxStage; stage += 1) {
+    lanes.push(renderStageLane(stage, step));
+    if (stage < maxStage) {
+      const connectorLabel = step.stage <= stage
+        ? "Earlier data remains linked"
+        : "Stage " + stage + " complete";
+      lanes.push('<div class="stage-connector" aria-hidden="true"><b>→</b><span>' + connectorLabel + '</span></div>');
+    }
+  }
+
+  document.getElementById("hub-root").innerHTML = [
+    '<div class="growing-map">',
+      flowToolbar(step),
+      stageMeter(step.stage),
+      '<div class="map-stage-grid" aria-live="polite">', lanes.join(""), '</div>',
+      flowState.completedDatasets.length && step.stage === 1
+        ? '<div class="loop-marker"><b>↺</b><span>Another data set selected: the flow safely returns to Stage 1 and keeps the same Experiment ID.</span></div>'
+        : '',
+      '<p class="progress-note"><strong>Only reached stages are visible.</strong> Answer the highlighted node to grow the map.</p>',
+    '</div>',
+  ].join("");
+}
+
+function renderInteractiveFlow() {
+  renderJourney();
+  renderHub();
+  wireFlowControls();
+  updatePrototypeState();
+}
+
+function wireFlowControls() {
+  document.querySelectorAll("[data-flow-choice]").forEach(button => {
+    button.addEventListener("click", () => handleChoice(button.dataset.flowChoice));
+  });
+  document.querySelectorAll("[data-flow-reset]").forEach(button => {
+    button.addEventListener("click", () => {
+      flowState = createFlowState();
+      renderInteractiveFlow();
+      requestAnimationFrame(() => {
+        document.querySelector('.variant:not([hidden]) [data-current-step]')
+          ?.scrollIntoView({behavior: "smooth", block: "center"});
+      });
+    });
+  });
 }
 
 function readEmbeddedContract() {
@@ -156,189 +499,6 @@ async function loadContract() {
   const response = await fetch("flow-v1.json", {cache: "no-store"});
   if (!response.ok) throw new Error("The prototype contract could not be loaded.");
   return response.json();
-}
-
-async function boot() {
-  contract = await loadContract();
-  renderJourney();
-  renderHub();
-  renderFaq();
-  wireStuckTool();
-  wireDetailButtons();
-  wireSwitcher();
-  showVariant(currentVariant, false);
-}
-
-function renderJourney() {
-  const facilitySteps = contract.facility_transfer.operations
-    .map((item, index) => '<li><b>' + (index + 1) + '</b><span>' + escapeHtml(item) + '</span></li>')
-    .join("");
-  const gate = contract.capture_boundary.all_required
-    .map((item, index) => '<li><b>YES ' + (index + 1) + '</b><span>' + escapeHtml(item) + '</span></li>')
-    .join("");
-  const beforeUpload = contract.experiment_id_decision.unknown.before_web_upload
-    .slice(1, 3)
-    .map(item => item.replace(/^Choose /, "").replace(/\.$/, ""))
-    .join(" → ");
-  const examples = contract.same_experiment_multiple_data.examples
-    .map(item => '<span>' + escapeHtml(item) + '</span>').join("");
-
-  document.getElementById("journey-root").innerHTML = [
-    '<div class="journey-board">',
-      '<section class="stage-lane stage-register" aria-labelledby="journey-stage-one">',
-        '<header><span>1</span><div><p>REGISTER</p><h3 id="journey-stage-one">Protect the first BMDL-controlled copy</h3></div></header>',
-        '<div class="source-branch">',
-          detailButton("source-lab", "route-card", "LAB / OWN SETUP", "Recording stops → register on the acquisition computer."),
-          detailButton("source-facility", "route-card facility-route", "SHARED FACILITY", "Unchanged originals → USB → your computer."),
-        '</div>',
-        '<ol class="facility-mini-path" aria-label="Shared facility transfer path">', facilitySteps, '</ol>',
-        '<div class="merge-marker"><span>Both source routes meet here</span><b aria-hidden="true">↓</b></div>',
-        '<article class="id-decision">',
-          '<div class="decision-title"><span>DECISION</span><h3>Do you know the LabMate Experiment ID?</h3></div>',
-          '<div class="decision-options">',
-            detailButton("experiment-known", "decision-option yes", "YES — ENTER IT", contract.experiment_id_decision.known.action),
-            detailButton("experiment-unknown", "decision-option no", "NO — REGISTER NOW", "Create the ID before browser upload: " + beforeUpload + "."),
-          '</div>',
-          '<p><strong>Important:</strong> ', escapeHtml(contract.experiment_id_decision.not_equivalent), '</p>',
-        '</article>',
-        '<article class="capture-gate">',
-          '<div><p class="eyebrow">Before Register · all three must be YES</p><h3>One Capture gate</h3></div>',
-          '<ol>', gate, '</ol>',
-          detailButton("capture-gate", "text-link", "Why these three checks?", ""),
-        '</article>',
-        '<div class="stage-completion">',
-          detailButton("register", "action-node", "REGISTER ONE CAPTURE", "Hash unchanged source files."),
-          arrow(),
-          checkpointBadge("raw_registered"),
-        '</div>',
-      '</section>',
-      '<div class="stage-down"><b aria-hidden="true">↓</b><span>Move one verified package at a time</span></div>',
-      '<section class="stage-lane stage-add" aria-labelledby="journey-stage-two">',
-        '<header><span>2</span><div><p>ADD DATA</p><h3 id="journey-stage-two">Export, upload, verify and explain</h3></div></header>',
-        '<div class="experiment-anchor"><span>ONE LABMATE EXPERIMENT</span><strong>[Experiment ID]</strong><small>Every package below can belong to this same Experiment.</small></div>',
-        '<div class="package-process">',
-          '<div class="process-stop">', detailButton("export", "action-node", "EXPORT / COPY PACKAGE", "Complete outer CAP folder."), checkpointBadge("local_export_verified"), '</div>',
-          arrow(),
-          '<div class="process-stop">', detailButton("upload", "action-node", "UPLOAD & VERIFY", "Choose the Experiment in the browser."), checkpointBadge("transfer_integrity_confirmed"), '</div>',
-          arrow(),
-          '<div class="process-stop">', detailButton("explain", "action-node", "EXPLAIN PACKAGE", "Save its scientific meaning."), checkpointBadge("explanation_complete"), '</div>',
-        '</div>',
-        '<article class="repeat-loop">',
-          '<div><p class="eyebrow">Different data may share one Experiment</p><h3>More registered data for this Experiment?</h3>',
-          '<div class="example-chips">', examples, '</div></div>',
-          '<div class="repeat-decision"><strong>YES</strong><span>Add the next separate Capture/package and repeat Stage 2.</span><b aria-hidden="true">↩</b></div>',
-          '<div class="repeat-decision done"><strong>NO</strong><span>Continue to final review.</span><b aria-hidden="true">↓</b></div>',
-          detailButton("same-experiment", "text-link", "When must data be a separate Capture?", ""),
-        '</article>',
-      '</section>',
-      '<div class="stage-down"><b aria-hidden="true">↓</b><span>Every intended package is verified and explained</span></div>',
-      '<section class="stage-lane stage-review" aria-labelledby="journey-stage-three">',
-        '<header><span>3</span><div><p>REVIEW &amp; SUBMIT</p><h3 id="journey-stage-three">Close the submission with a receipt</h3></div></header>',
-        '<div class="stage-completion final">',
-          detailButton("review", "action-node", "REVIEW EVERY DATA-SET CARD", "Resolve anything missing and submit."),
-          arrow(),
-          checkpointBadge("slack_receipt"),
-        '</div>',
-        '<article class="additional-route">',
-          '<span>MORE DATA LATER?</span><strong>Register it → select the same Experiment → Additional Data</strong>',
-          detailButton("additional", "text-link", "Why does this not change the original submission?", ""),
-        '</article>',
-      '</section>',
-    '</div>',
-  ].join("");
-  renderDetail("journey", selectedDetail.journey);
-}
-
-function datasetCard(name, index) {
-  return [
-    '<button class="dataset-card" type="button" data-detail="same-experiment">',
-      '<span class="dataset-number">DATA SET ', String(index + 1).padStart(2, "0"), '</span>',
-      '<strong>', escapeHtml(name), '</strong>',
-      '<small>Separate Capture + separate package</small>',
-      '<span class="mini-proof"><i>✓ RAW</i><i>✓ EXPORT</i><i>✓ TRANSFER</i><i>✓ EXPLAIN</i></span>',
-    '</button>',
-  ].join("");
-}
-
-function renderHub() {
-  const examples = contract.same_experiment_multiple_data.examples
-    .map(datasetCard).join("");
-  const gate = contract.capture_boundary.all_required
-    .map(item => '<li><b>YES</b><span>' + escapeHtml(item) + '</span></li>').join("");
-
-  document.getElementById("hub-root").innerHTML = [
-    '<div class="hub-board">',
-      '<section class="hub-intake" aria-labelledby="hub-intake-title">',
-        '<header><span>1</span><div><p>REGISTER</p><h3 id="hub-intake-title">Bring each coherent data set in</h3></div></header>',
-        detailButton("source-lab", "hub-route", "LAB / OWN SETUP", "Writing stops → register there."),
-        detailButton("source-facility", "hub-route facility-route", "SHARED FACILITY", "Unchanged originals → USB → your computer → register."),
-        '<article class="hub-id-card"><span>EXPERIMENT ID?</span><strong>YES: enter it</strong><strong>NO: register now</strong><small>Before upload: Slack Home → Record new experiment → Save &amp; continue.</small></article>',
-        '<article class="hub-gate"><span>ONE CAPTURE · THREE YES ANSWERS</span><ol>', gate, '</ol></article>',
-        checkpointBadge("raw_registered"),
-      '</section>',
-      '<div class="hub-arrow" aria-hidden="true">→</div>',
-      '<section class="experiment-hub" aria-labelledby="experiment-hub-title">',
-        '<button class="experiment-core" type="button" data-detail="experiment">',
-          '<span>ONE LABMATE EXPERIMENT</span><strong id="experiment-hub-title">[Experiment ID]</strong>',
-          '<small>Different data sets can all connect here.</small>',
-        '</button>',
-        '<div class="dataset-grid">', examples, '</div>',
-        '<div class="hub-proof-chain" aria-label="Proof chain for every data set">',
-          checkpointBadge("raw_registered", true),
-          '<span aria-hidden="true">→</span>',
-          checkpointBadge("local_export_verified", true),
-          '<span aria-hidden="true">→</span>',
-          checkpointBadge("transfer_integrity_confirmed", true),
-          '<span aria-hidden="true">→</span>',
-          checkpointBadge("explanation_complete", true),
-        '</div>',
-        '<p class="hub-rule"><strong>Separate Capture when:</strong> source/instrument, acquisition session or scientific meaning differs.</p>',
-        '<button class="add-data-node" type="button" data-detail="same-experiment"><b>＋</b><span><strong>ADD ANOTHER REGISTERED DATA SET</strong><small>Same Experiment ID, separate Capture/package.</small></span></button>',
-      '</section>',
-      '<div class="hub-arrow" aria-hidden="true">→</div>',
-      '<section class="hub-finish" aria-labelledby="hub-finish-title">',
-        '<header><span>3</span><div><p>REVIEW &amp; SUBMIT</p><h3 id="hub-finish-title">Review the whole Experiment</h3></div></header>',
-        '<ul><li>Every intended data-set card is present.</li><li>Every explanation is complete.</li><li>Final questions are answered.</li></ul>',
-        detailButton("review", "action-node", "FINAL REVIEW & SUBMIT", ""),
-        checkpointBadge("slack_receipt"),
-      '</section>',
-      '<article class="hub-additional">',
-        '<span>MORE DATA AFTER THE RECEIPT?</span>',
-        '<strong>Same Experiment → separate append-only Additional Data</strong>',
-        detailButton("additional", "text-link", "Show the later-data rule", ""),
-      '</article>',
-    '</div>',
-  ].join("");
-  renderDetail("hub", selectedDetail.hub);
-}
-
-function renderDetail(scope, key) {
-  const detail = detailItems()[key];
-  const target = document.getElementById(scope + "-detail");
-  target.innerHTML = [
-    '<div><span class="node-index">', escapeHtml(detail.index), '</span>',
-    '<h3>', escapeHtml(detail.title), '</h3>',
-    '<p>', escapeHtml(detail.body), '</p></div>',
-    '<div class="detail-proof"><span>CHECKPOINT / RULE</span><strong>', escapeHtml(detail.proof), '</strong></div>',
-  ].join("");
-}
-
-function wireDetailButtons() {
-  document.querySelectorAll("[data-detail]").forEach(button => {
-    button.addEventListener("click", () => {
-      const variant = button.closest(".variant");
-      if (!variant) return;
-      const scope = variant.dataset.variant;
-      selectedDetail[scope] = button.dataset.detail;
-      variant.querySelectorAll("[data-detail]").forEach(item => {
-        item.classList.toggle("selected", item === button);
-      });
-      renderDetail(scope, selectedDetail[scope]);
-      updatePrototypeState();
-    });
-  });
-  document.querySelector('#variant-journey [data-detail="register"]')?.classList.add("selected");
-  document.querySelector('#variant-hub [data-detail="experiment"]')?.classList.add("selected");
 }
 
 function renderFaq() {
@@ -429,8 +589,7 @@ function showVariant(id, updateUrl) {
     section.hidden = section.dataset.variant !== id;
   });
   const current = VARIANTS.find(item => item.id === id);
-  document.getElementById("variant-label").textContent =
-    current.key + " — " + current.name;
+  document.getElementById("variant-label").textContent = current.key + " — " + current.name;
   if (updateUrl) {
     const url = new URL(window.location.href);
     url.searchParams.set("variant", currentVariant);
@@ -443,10 +602,11 @@ function showVariant(id, updateUrl) {
 }
 
 function updatePrototypeState() {
+  if (!contract) return;
   const current = VARIANTS.find(item => item.id === currentVariant);
-  const detail = detailItems()[selectedDetail[currentVariant]];
+  const step = currentStep();
   document.getElementById("prototype-state").textContent =
-    "Variant " + current.key + " · Selected: " + detail.title;
+    "Variant " + current.key + " · Stage " + step.stage + " · " + step.question;
 }
 
 function renderBootError(error) {
@@ -456,6 +616,15 @@ function renderBootError(error) {
   document.getElementById("journey-root").innerHTML =
     '<div class="boot-error"><strong>The prototype could not start.</strong><span>' +
     escapeHtml(String(error)) + '</span></div>';
+}
+
+async function boot() {
+  contract = await loadContract();
+  renderInteractiveFlow();
+  renderFaq();
+  wireStuckTool();
+  wireSwitcher();
+  showVariant(currentVariant, false);
 }
 
 boot().catch(renderBootError);

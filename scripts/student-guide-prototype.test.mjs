@@ -58,10 +58,23 @@ test("two map variants are structurally different and share one contract", () =>
   assert.match(runtime, /renderJourney\(\)/);
   assert.match(runtime, /renderHub\(\)/);
   assert.match(runtime, /fetch\("flow-v1\.json"/);
-  assert.match(styles, /\.journey-board/);
-  assert.match(styles, /\.experiment-hub/);
-  assert.match(styles, /\.hub-board/);
-  assert.match(styles, /\.dataset-grid/);
+  assert.match(styles, /\.guided-flow/);
+  assert.match(styles, /\.guided-path/);
+  assert.match(styles, /\.growing-map/);
+  assert.match(styles, /\.map-stage-grid/);
+});
+
+test("answers reveal only the next applicable flow node", () => {
+  assert.match(runtime, /let flowState = createFlowState\(\)/);
+  assert.match(runtime, /function currentStep\(\)/);
+  assert.match(runtime, /data-flow-choice/);
+  assert.match(runtime, /handleChoice\(button\.dataset\.flowChoice\)/);
+  assert.match(runtime, /Future steps stay hidden until your answer makes them relevant/);
+  assert.match(runtime, /for \(let stage = 1; stage <= maxStage; stage \+= 1\)/);
+  assert.match(runtime, /data-flow-reset/);
+  assert.match(runtime, /scrollIntoView\(\{behavior: "smooth", block: "center"\}\)/);
+  assert.match(styles, /\.flow-arrow-down/);
+  assert.match(styles, /\.stage-connector/);
 });
 
 test("floating switcher is URL-stable, keyboard-aware and local-only", () => {
@@ -76,13 +89,14 @@ test("floating switcher is URL-stable, keyboard-aware and local-only", () => {
 
 test("both maps teach source transfer, Experiment ID and the Capture boundary", () => {
   assert.match(runtime, /SHARED FACILITY/);
-  assert.match(runtime, /Unchanged originals → USB → your computer → register/);
+  assert.match(runtime, /Facility originals unchanged → copy to USB → bring to your computer → register promptly/);
   assert.match(runtime, /Do you know the LabMate Experiment ID\?/);
   assert.match(runtime, /Record new experiment/);
   assert.match(runtime, /Save & continue/);
   assert.match(runtime, /Plan an experiment/);
-  assert.match(runtime, /Before Register · all three must be YES/);
-  assert.match(runtime, /ONE CAPTURE · THREE YES ANSWERS/);
+  assert.match(runtime, /Capture check " \+ \(captureIndex \+ 1\) \+ " of 3/);
+  assert.match(runtime, /All three answers must be YES/);
+  assert.match(runtime, /Split the selection before registration/);
 });
 
 test("both maps preserve proof checkpoints and multiple data under one Experiment", () => {
@@ -94,12 +108,13 @@ test("both maps preserve proof checkpoints and multiple data under one Experimen
   ]);
   assert.equal(contract.add_data_loop.single_transfer_at_a_time, true);
   assert.equal(contract.add_data_loop.explain_before_next_package, true);
-  assert.match(runtime, /Different data may share one Experiment/);
-  assert.match(runtime, /More registered data for this Experiment\?/);
-  assert.match(runtime, /ADD ANOTHER REGISTERED DATA SET/);
+  assert.match(runtime, /Is there another registered data set for this Experiment\?/);
+  assert.match(runtime, /YES — ADD ANOTHER/);
+  assert.match(runtime, /Return to Stage 1 for the next data set/);
   assert.match(runtime, /Additional Data/);
   assert.match(runtime, /verification_checkpoints/);
-  assert.match(styles, /\.checkpoint-badge/);
+  assert.match(styles, /\.flow-proof/);
+  assert.match(styles, /\.experiment-flow-hub/);
 });
 
 test("prototype is private, read-only, responsive and usable without JavaScript", () => {
@@ -110,6 +125,7 @@ test("prototype is private, read-only, responsive and usable without JavaScript"
   assert.doesNotMatch(runtime, /google\.script|fetch\([^)]*https:/);
   assert.match(guide, /aria-live="polite"/);
   assert.match(styles, /@media \(max-width: 680px\)/);
+  assert.match(styles, /\.map-stage-lane \{ width: 100%; flex: 0 0 auto; \}/);
   assert.match(styles, /prefers-reduced-motion/);
   assert.doesNotMatch(styles, /\.map-connector/);
   assert.doesNotMatch(styles, /\.cards-overview|\.wizard-screen/);
