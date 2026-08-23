@@ -1,0 +1,60 @@
+{
+  "contract_version": "registered-raw-student-flow-v2",
+  "status": "active",
+  "language": "en",
+  "scope": "registered_raw_submission",
+  "stages": [
+    {"id": "register", "number": 1, "label": "REGISTER", "complete_when": "RAW — REGISTERED"},
+    {"id": "add_data", "number": 2, "label": "ADD DATA", "complete_when": "Every intended package shows TRANSFER INTEGRITY CONFIRMED and has an explanation."},
+    {"id": "review_submit", "number": 3, "label": "REVIEW & SUBMIT", "complete_when": "LabMate shows the final receipt and Slack delivers its Receipt ID."}
+  ],
+  "source_paths": [
+    {"id": "acquisition_computer", "instruction": "For a lab instrument, custom board or software recording on your own computer, wait until recording and file writing stop, then register the unchanged files on that acquisition computer before the first copy whenever possible."},
+    {"id": "shared_facility", "instruction": "Keep the delivered originals unchanged, carry them by USB to your own computer and register them there promptly before renaming, converting or analysing them.", "assurance_boundary": "Registration on your computer does not verify the earlier facility or USB-copy history."}
+  ],
+  "capture_boundary": {
+    "one_capture_when": [
+      "Do all selected files belong to one scientific Experiment?",
+      "Did all selected files come from one source and one acquisition session?",
+      "Can all selected files be explained together as one coherent data set?"
+    ],
+    "separate_capture_when": ["The Experiment is different.", "The source or acquisition session is different.", "The scientific meaning should be explained separately."],
+    "same_experiment_multiple_data": "Different Captures such as Raman, fixture photographs and SEM data may use the same Experiment ID."
+  },
+  "entry_rules": {
+    "desktop_experiment_id": "An Experiment ID is optional during offline desktop registration.",
+    "browser_identity": "The Experiment is selected or created only after the browser verifies the institutional Google account.",
+    "create_surfaces": ["LabMate Slack Home → Record new experiment", "Registered RAW browser handoff → Create new experiment"],
+    "plan_is_not_record": "Plan an experiment is optional planning context and does not create the Experiment record used for data submission."
+  },
+  "data_kind_gate": {
+    "registered_raw": "A desktop CAP handoff automatically uses the registered RAW path.",
+    "supporting_or_processed": "Supporting or processed files use the ordinary LabMate uploader and never receive RAW — REGISTERED status."
+  },
+  "checkpoints": [
+    {"id": "raw_registered", "stage": 1, "label": "RAW — REGISTERED", "system": "desktop"},
+    {"id": "local_export_verified", "stage": 2, "label": "LOCAL EXPORT VERIFIED", "system": "desktop"},
+    {"id": "transfer_integrity_confirmed", "stage": 2, "label": "TRANSFER INTEGRITY CONFIRMED", "system": "web_and_slack", "not_final_receipt": true},
+    {"id": "explanation_complete", "stage": 2, "label": "EXPLANATION COMPLETE", "system": "web"},
+    {"id": "final_receipt", "stage": 3, "label": "FINAL RECEIPT", "system": "web_and_slack"}
+  ],
+  "submission_rules": {
+    "at_least_one_data_set_required": true,
+    "context_only_submission_available": false,
+    "additional_data": "Data added after submission opens or resumes append-only Additional Data and never changes the original receipt."
+  },
+  "faq": [
+    {"question": "What if an instrument, custom board or my own computer recorded the data?", "answer": "As soon as recording and file writing stop, register the unchanged files—preferably on that acquisition computer."},
+    {"question": "What if the files came from a shared facility?", "answer": "Keep the delivered originals unchanged, bring them by USB to your own computer and register them there promptly before changing or analysing anything."},
+    {"question": "Do I need an Experiment ID before desktop registration?", "answer": "No. Register the unchanged files immediately. Select or create the Experiment after the secure browser verifies your institutional account."},
+    {"question": "Do I have to use Slack to create the Experiment?", "answer": "No. Use either Record new experiment in Slack or Create new experiment in the verified browser handoff. Both create the same LabMate record."},
+    {"question": "Is Plan an experiment the Experiment ID?", "answer": "No. A plan is optional context. Record new experiment in Slack or Create new experiment in the browser creates the submission record."},
+    {"question": "Which files belong in one Capture?", "answer": "Files from one Experiment, one source and acquisition session, and one coherent data set that you would explain together."},
+    {"question": "Can different data types belong to the same Experiment?", "answer": "Yes. Give each distinct source, session or scientific meaning its own Capture, then add all intended packages to the same Experiment."},
+    {"question": "Can I submit an Experiment with no files?", "answer": "No. A registered-RAW submission needs at least one described data set."},
+    {"question": "Is the transfer-confirmed Slack message the final receipt?", "answer": "No. It is a Stage 2 checkpoint. Explain every package and complete Stage 3 to receive the final Receipt ID."},
+    {"question": "What if I have supporting or processed files?", "answer": "Choose Supporting / processed in LabMate. They may remain part of the Experiment, but that path does not claim RAW — REGISTERED."},
+    {"question": "Can I add data after submitting?", "answer": "Yes. LabMate creates or resumes a separate Additional Data submission and keeps the original receipt unchanged."},
+    {"question": "When am I completely finished?", "answer": "After every intended package is verified and explained, final review is submitted, LabMate shows the final receipt and Slack delivers its Receipt ID."}
+  ]
+}
