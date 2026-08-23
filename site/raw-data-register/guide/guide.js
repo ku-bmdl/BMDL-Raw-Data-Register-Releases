@@ -1,12 +1,4 @@
-const VARIANTS = [
-  {id: "journey", key: "C1", name: "Guided journey"},
-  {id: "hub", key: "C2", name: "Growing flow map"},
-];
-
-const params = new URLSearchParams(window.location.search);
-let currentVariant = VARIANTS.some(item => item.id === params.get("variant"))
-  ? params.get("variant")
-  : "journey";
+// Canonical read-only student guide. Answers remain in page memory only.
 let contract;
 let flowState = createFlowState();
 
@@ -20,7 +12,6 @@ function createFlowState() {
   return {
     dataset: 1,
     history: [],
-    completedDatasets: [],
     source: null,
     ready: null,
     idKnown: null,
@@ -237,12 +228,6 @@ function addHistory(stage, title, answer, tone = "complete") {
   flowState.history.push({stage, title, answer, tone, dataset: flowState.dataset});
 }
 
-function finishCurrentDataset() {
-  if (!flowState.completedDatasets.includes(flowState.dataset)) {
-    flowState.completedDatasets.push(flowState.dataset);
-  }
-}
-
 function handleChoice(value) {
   const step = currentStep();
   const state = flowState;
@@ -289,7 +274,6 @@ function handleChoice(value) {
     state.explained = true;
     addHistory(2, "Package explanation", checkpoint("explanation_complete").label);
   } else if (step.id === "more-data") {
-    finishCurrentDataset();
     if (value === "yes") {
       addHistory(2, "More data for this Experiment?", "YES — loop to another separate data set");
       state.dataset += 1;
@@ -313,7 +297,7 @@ function handleChoice(value) {
 
   renderInteractiveFlow();
   requestAnimationFrame(() => {
-    document.querySelector('.variant:not([hidden]) [data-current-step]')
+    document.querySelector('[data-current-step]')
       ?.scrollIntoView({behavior: "smooth", block: "center"});
   });
 }
@@ -334,9 +318,9 @@ function renderOptions(step) {
   ].join("")).join("") + '</div>';
 }
 
-function renderCurrentCard(step, compact = false) {
+function renderCurrentCard(step) {
   return [
-    '<article class="flow-question ', compact ? 'compact ' : '', step.tone || '', '" data-current-step>',
+    '<article class="flow-question ', step.tone || '', '" data-current-step>',
       '<p class="flow-kicker">STAGE ', step.stage, ' · ', escapeHtml(step.eyebrow), '</p>',
       '<h3>', escapeHtml(step.question), '</h3>',
       '<p class="flow-help">', escapeHtml(step.help), '</p>',
@@ -346,9 +330,9 @@ function renderCurrentCard(step, compact = false) {
   ].join("");
 }
 
-function renderHistoryNode(item, compact = false) {
+function renderHistoryNode(item) {
   return [
-    '<article class="flow-history-node ', compact ? 'compact ' : '', item.tone === "stop" ? 'stopped' : '', '">',
+    '<article class="flow-history-node ', item.tone === "stop" ? 'stopped' : '', '">',
       '<span>DATA SET ', String(item.dataset).padStart(2, "0"), ' · STAGE ', item.stage, '</span>',
       '<strong>', escapeHtml(item.title), '</strong>',
       '<small>', escapeHtml(item.answer), '</small>',
@@ -372,7 +356,7 @@ function stageMeter(activeStage) {
 function flowToolbar(step) {
   return [
     '<div class="flow-toolbar">',
-      '<div><span>LIVE PROTOTYPE STATE</span><strong>Data set ', String(flowState.dataset).padStart(2, "0"), ' · Stage ', step.stage, '</strong></div>',
+      '<div><span>YOUR CURRENT PATH</span><strong>Data set ', String(flowState.dataset).padStart(2, "0"), ' · Stage ', step.stage, '</strong></div>',
       '<button type="button" data-flow-reset>Start over</button>',
     '</div>',
   ].join("");
@@ -400,76 +384,9 @@ function renderJourney() {
   ].join("");
 }
 
-function experimentHubSummary() {
-  const examples = contract.same_experiment_multiple_data.examples
-    .map(item => '<span>' + escapeHtml(item) + '</span>').join("");
-  const datasets = flowState.completedDatasets
-    .map(number => '<b>✓ DATA SET ' + String(number).padStart(2, "0") + '</b>')
-    .join("");
-  return [
-    '<article class="experiment-flow-hub">',
-      '<span>ONE LABMATE EXPERIMENT</span><strong>[Experiment ID]</strong>',
-      '<small>Separate Captures and packages can all connect to this same record.</small>',
-      '<div class="hub-examples" aria-label="Example data sets">', examples, '</div>',
-      datasets ? '<div class="completed-datasets">' + datasets + '</div>' : '',
-    '</article>',
-  ].join("");
-}
-
-function renderStageLane(stageNumber, step) {
-  const stage = contract.steps.find(item => item.number === stageNumber);
-  const events = flowState.history.filter(item => item.stage === stageNumber);
-  const current = step.stage === stageNumber;
-  const nodes = [];
-
-  if (stageNumber === 2) nodes.push(experimentHubSummary());
-  events.forEach(item => nodes.push(renderHistoryNode(item, true)));
-  if (current) nodes.push(renderCurrentCard(step, true));
-
-  return [
-    '<section class="map-stage-lane ', current ? 'current' : 'complete', '" aria-label="Stage ', stageNumber, '">',
-      '<header><b>', stageNumber, '</b><div><span>STAGE ', stageNumber, '</span><strong>', escapeHtml(stage.label), '</strong></div></header>',
-      '<div class="map-node-path">',
-        nodes.map((node, index) => node + (index < nodes.length - 1 ? downArrow() : "")).join(""),
-      '</div>',
-    '</section>',
-  ].join("");
-}
-
-function renderHub() {
-  const step = currentStep();
-  const maxHistoryStage = Math.max(1, ...flowState.history.map(item => item.stage));
-  const maxStage = Math.max(step.stage, maxHistoryStage);
-  const lanes = [];
-
-  for (let stage = 1; stage <= maxStage; stage += 1) {
-    lanes.push(renderStageLane(stage, step));
-    if (stage < maxStage) {
-      const connectorLabel = step.stage <= stage
-        ? "Earlier data remains linked"
-        : "Stage " + stage + " complete";
-      lanes.push('<div class="stage-connector" aria-hidden="true"><b>→</b><span>' + connectorLabel + '</span></div>');
-    }
-  }
-
-  document.getElementById("hub-root").innerHTML = [
-    '<div class="growing-map">',
-      flowToolbar(step),
-      stageMeter(step.stage),
-      '<div class="map-stage-grid" aria-live="polite">', lanes.join(""), '</div>',
-      flowState.completedDatasets.length && step.stage === 1
-        ? '<div class="loop-marker"><b>↺</b><span>Another data set selected: the flow safely returns to Stage 1 and keeps the same Experiment ID.</span></div>'
-        : '',
-      '<p class="progress-note"><strong>Only reached stages are visible.</strong> Answer the highlighted node to grow the map.</p>',
-    '</div>',
-  ].join("");
-}
-
 function renderInteractiveFlow() {
   renderJourney();
-  renderHub();
   wireFlowControls();
-  updatePrototypeState();
 }
 
 function wireFlowControls() {
@@ -481,7 +398,7 @@ function wireFlowControls() {
       flowState = createFlowState();
       renderInteractiveFlow();
       requestAnimationFrame(() => {
-        document.querySelector('.variant:not([hidden]) [data-current-step]')
+        document.querySelector('[data-current-step]')
           ?.scrollIntoView({behavior: "smooth", block: "center"});
       });
     });
@@ -490,14 +407,14 @@ function wireFlowControls() {
 
 function readEmbeddedContract() {
   const node = document.getElementById("flow-contract");
-  if (!node) throw new Error("The embedded prototype contract is missing.");
+  if (!node) throw new Error("The embedded guide contract is missing.");
   return JSON.parse(node.textContent);
 }
 
 async function loadContract() {
   if (window.location.protocol === "file:") return readEmbeddedContract();
   const response = await fetch("flow-v1.json", {cache: "no-store"});
-  if (!response.ok) throw new Error("The prototype contract could not be loaded.");
+  if (!response.ok) throw new Error("The guide contract could not be loaded.");
   return response.json();
 }
 
@@ -566,55 +483,9 @@ function wireStuckTool() {
   });
 }
 
-function wireSwitcher() {
-  document.getElementById("previous-variant").addEventListener("click", () => cycleVariant(-1));
-  document.getElementById("next-variant").addEventListener("click", () => cycleVariant(1));
-  document.addEventListener("keydown", event => {
-    const target = event.target;
-    if (target instanceof Element && target.matches("input, textarea, [contenteditable]")) return;
-    if (event.key === "ArrowLeft") cycleVariant(-1);
-    if (event.key === "ArrowRight") cycleVariant(1);
-  });
-}
-
-function cycleVariant(direction) {
-  const currentIndex = VARIANTS.findIndex(item => item.id === currentVariant);
-  const nextIndex = (currentIndex + direction + VARIANTS.length) % VARIANTS.length;
-  showVariant(VARIANTS[nextIndex].id, true);
-}
-
-function showVariant(id, updateUrl) {
-  currentVariant = id;
-  document.querySelectorAll(".variant").forEach(section => {
-    section.hidden = section.dataset.variant !== id;
-  });
-  const current = VARIANTS.find(item => item.id === id);
-  document.getElementById("variant-label").textContent = current.key + " — " + current.name;
-  if (updateUrl) {
-    const url = new URL(window.location.href);
-    url.searchParams.set("variant", currentVariant);
-    window.history.replaceState({}, "", url);
-  }
-  updatePrototypeState();
-  const prototypeHost = ["localhost", "127.0.0.1", ""].includes(window.location.hostname) ||
-    params.get("prototype") === "1";
-  document.getElementById("prototype-switcher").hidden = !prototypeHost;
-}
-
-function updatePrototypeState() {
-  if (!contract) return;
-  const current = VARIANTS.find(item => item.id === currentVariant);
-  const step = currentStep();
-  document.getElementById("prototype-state").textContent =
-    "Variant " + current.key + " · Stage " + step.stage + " · " + step.question;
-}
-
 function renderBootError(error) {
-  document.querySelectorAll(".variant").forEach(section => {
-    section.hidden = section.dataset.variant !== "journey";
-  });
   document.getElementById("journey-root").innerHTML =
-    '<div class="boot-error"><strong>The prototype could not start.</strong><span>' +
+    '<div class="boot-error"><strong>The guide could not start.</strong><span>' +
     escapeHtml(String(error)) + '</span></div>';
 }
 
@@ -623,8 +494,6 @@ async function boot() {
   renderInteractiveFlow();
   renderFaq();
   wireStuckTool();
-  wireSwitcher();
-  showVariant(currentVariant, false);
 }
 
 boot().catch(renderBootError);

@@ -4,23 +4,25 @@ import test from "node:test";
 
 const root = new URL("../", import.meta.url);
 const downloadPage = readFileSync(new URL("site/raw-data-register/index.html", root), "utf8");
-const guide = readFileSync(new URL("site/raw-data-register/guide-prototype/index.html", root), "utf8");
-const runtime = readFileSync(new URL("site/raw-data-register/guide-prototype/guide.js", root), "utf8");
-const styles = readFileSync(new URL("site/raw-data-register/guide-prototype/guide.css", root), "utf8");
-const contract = JSON.parse(readFileSync(new URL("site/raw-data-register/guide-prototype/flow-v1.json", root), "utf8"));
+const guide = readFileSync(new URL("site/raw-data-register/guide/index.html", root), "utf8");
+const runtime = readFileSync(new URL("site/raw-data-register/guide/guide.js", root), "utf8");
+const styles = readFileSync(new URL("site/raw-data-register/guide/guide.css", root), "utf8");
+const contract = JSON.parse(readFileSync(new URL("site/raw-data-register/guide/flow-v1.json", root), "utf8"));
 const packageJson = JSON.parse(readFileSync(new URL("package.json", root), "utf8"));
 
-test("download page links only to the explicitly marked prototype route", () => {
-  assert.match(downloadPage, /guide-prototype\/\?variant=journey/);
-  assert.match(downloadPage, /two interactive map designs/);
-  assert.match(downloadPage, /Student workflow prototype/);
-  assert.match(guide, /PROTOTYPE — do not publish as the final student guide/);
-  assert.match(guide, /noindex, nofollow, noarchive/);
+test("download page links to the canonical student guide", () => {
+  assert.match(downloadPage, /href="guide\/"/);
+  assert.match(downloadPage, /Student workflow guide/);
+  assert.match(downloadPage, /OPEN STUDENT GUIDE/);
+  assert.doesNotMatch(downloadPage, /guide-prototype|variant=/);
+  assert.match(guide, /STUDENT GUIDE/);
+  assert.match(guide, /Official BMDL student workflow guide/);
+  assert.doesNotMatch(guide, /PROTOTYPE|noindex|noarchive/);
 });
 
-test("prototype contract defines the full three-stage registered RAW workflow", () => {
+test("active contract defines the full three-stage registered RAW workflow", () => {
   assert.equal(contract.contract_version, "registered-raw-student-flow-v1");
-  assert.equal(contract.status, "prototype");
+  assert.equal(contract.status, "active");
   assert.deepEqual(contract.steps.map(step => step.id), [
     "register", "add_data", "review_submit",
   ]);
@@ -49,19 +51,15 @@ test("prototype contract defines the full three-stage registered RAW workflow", 
   assert.equal(contract.faq.length, 12);
 });
 
-test("two map variants are structurally different and share one contract", () => {
-  for (const variant of ["journey", "hub"]) {
-    assert.match(guide, new RegExp(`data-variant="${variant}"`));
-    assert.match(runtime, new RegExp(`id: "${variant}"`));
-  }
-  assert.doesNotMatch(guide, /data-variant="(?:cards|wizard|map)"/);
+test("chosen C1 flow is the only guide design", () => {
+  assert.match(guide, /id="journey-root"/);
   assert.match(runtime, /renderJourney\(\)/);
-  assert.match(runtime, /renderHub\(\)/);
   assert.match(runtime, /fetch\("flow-v1\.json"/);
   assert.match(styles, /\.guided-flow/);
   assert.match(styles, /\.guided-path/);
-  assert.match(styles, /\.growing-map/);
-  assert.match(styles, /\.map-stage-grid/);
+  assert.doesNotMatch(guide, /data-variant|variant-hub|prototype-switcher|C2/);
+  assert.doesNotMatch(runtime, /VARIANTS|currentVariant|renderHub|wireSwitcher|variant=/);
+  assert.doesNotMatch(styles, /\.growing-map|\.map-stage-grid|\.prototype-switcher/);
 });
 
 test("answers reveal only the next applicable flow node", () => {
@@ -70,24 +68,13 @@ test("answers reveal only the next applicable flow node", () => {
   assert.match(runtime, /data-flow-choice/);
   assert.match(runtime, /handleChoice\(button\.dataset\.flowChoice\)/);
   assert.match(runtime, /Future steps stay hidden until your answer makes them relevant/);
-  assert.match(runtime, /for \(let stage = 1; stage <= maxStage; stage \+= 1\)/);
   assert.match(runtime, /data-flow-reset/);
   assert.match(runtime, /scrollIntoView\(\{behavior: "smooth", block: "center"\}\)/);
   assert.match(styles, /\.flow-arrow-down/);
-  assert.match(styles, /\.stage-connector/);
+  assert.doesNotMatch(runtime, /localStorage|sessionStorage/);
 });
 
-test("floating switcher is URL-stable, keyboard-aware and local-only", () => {
-  assert.match(guide, /id="prototype-switcher"/);
-  assert.match(runtime, /url\.searchParams\.set\("variant", currentVariant\)/);
-  assert.match(runtime, /event\.key === "ArrowLeft"/);
-  assert.match(runtime, /event\.key === "ArrowRight"/);
-  assert.match(runtime, /target instanceof Element && target\.matches\("input, textarea, \[contenteditable\]"\)/);
-  assert.match(runtime, /"localhost", "127\.0\.0\.1"/);
-  assert.match(runtime, /prototype-switcher"\)\.hidden = !prototypeHost/);
-});
-
-test("both maps teach source transfer, Experiment ID and the Capture boundary", () => {
+test("guide teaches source transfer, Experiment ID and the Capture boundary", () => {
   assert.match(runtime, /SHARED FACILITY/);
   assert.match(runtime, /Facility originals unchanged → copy to USB → bring to your computer → register promptly/);
   assert.match(runtime, /Do you know the LabMate Experiment ID\?/);
@@ -99,7 +86,7 @@ test("both maps teach source transfer, Experiment ID and the Capture boundary", 
   assert.match(runtime, /Split the selection before registration/);
 });
 
-test("both maps preserve proof checkpoints and multiple data under one Experiment", () => {
+test("guide preserves proof checkpoints and the same-Experiment data loop", () => {
   assert.deepEqual(contract.add_data_loop.operations, [
     "EXPORT / COPY PACKAGE",
     "UPLOAD & VERIFY",
@@ -114,31 +101,27 @@ test("both maps preserve proof checkpoints and multiple data under one Experimen
   assert.match(runtime, /Additional Data/);
   assert.match(runtime, /verification_checkpoints/);
   assert.match(styles, /\.flow-proof/);
-  assert.match(styles, /\.experiment-flow-hub/);
 });
 
-test("prototype is private, read-only, responsive and usable without JavaScript", () => {
+test("guide is public, read-only, responsive and usable without JavaScript", () => {
   assert.match(guide, /<noscript>/);
   assert.match(guide, /This guide never reads or uploads your files/);
   assert.doesNotMatch(guide, /type="file"/i);
-  assert.doesNotMatch(runtime, /localStorage|sessionStorage/);
   assert.doesNotMatch(runtime, /google\.script|fetch\([^)]*https:/);
   assert.match(guide, /aria-live="polite"/);
   assert.match(styles, /@media \(max-width: 680px\)/);
-  assert.match(styles, /\.map-stage-lane \{ width: 100%; flex: 0 0 auto; \}/);
   assert.match(styles, /prefers-reduced-motion/);
-  assert.doesNotMatch(styles, /\.map-connector/);
-  assert.doesNotMatch(styles, /\.cards-overview|\.wizard-screen/);
+  assert.doesNotMatch(styles, /\.cards-overview|\.wizard-screen|\.map-connector/);
 });
 
-test("prototype has one-command local preview", () => {
+test("guide has one-command local preview", () => {
   assert.equal(
     packageJson.scripts["preview:guide"],
     "python3 -m http.server 4174 --directory site",
   );
 });
 
-test("direct file preview boots from an embedded copy of the contract", () => {
+test("direct file opening boots from an embedded copy of the active contract", () => {
   const embeddedMatch = guide.match(
     /<script id="flow-contract" type="application\/json">([\s\S]*?)<\/script>/,
   );
