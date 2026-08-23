@@ -33,12 +33,12 @@
     {
       "id": "lab_instrument",
       "label": "Lab instrument or your own setup",
-      "instruction": "For an instrument, custom board or software recording on your own computer, wait until writing stops and then register on that acquisition computer before the first copy whenever possible."
+      "instruction": "For a lab instrument, custom board or software recording on your own computer, wait until recording and file writing stop, then register the unchanged files on that acquisition computer before the first copy whenever possible."
     },
     {
       "id": "shared_facility",
       "label": "Shared or core facility",
-      "instruction": "Keep the original delivery unchanged and register it on the first BMDL-controlled computer immediately after receipt."
+      "instruction": "Keep the delivered originals unchanged, carry them by USB to your own computer and register them there promptly before renaming, converting or analysing them."
     }
   ],
   "capture_boundary": {
@@ -82,7 +82,7 @@
   },
   "add_data_loop": {
     "operations": [
-      "PREPARE PACKAGE",
+      "EXPORT / COPY PACKAGE",
       "UPLOAD & VERIFY",
       "EXPLAIN THIS PACKAGE",
       "ADD ANOTHER REGISTERED PACKAGE"
@@ -98,7 +98,7 @@
   },
   "assurance": [
     "RAW — REGISTERED",
-    "LOCAL PACKAGE VERIFIED",
+    "LOCAL EXPORT VERIFIED",
     "TRANSFER INTEGRITY CONFIRMED",
     "SOURCE VERIFICATION — NOT PERFORMED IN V1"
   ],
@@ -111,7 +111,17 @@
     {
       "id": "timing_facility",
       "question": "What if the files came from a shared facility?",
-      "answer": "Register the unchanged original delivery immediately after receiving it, before changing or analysing anything."
+      "answer": "Keep the delivered originals unchanged, bring them by USB to your own computer and register them there promptly before changing or analysing anything."
+    },
+    {
+      "id": "experiment_id_before_register",
+      "question": "Do I need an Experiment ID before registration?",
+      "answer": "No. Choose NO in Raw Data Register and register offline now. Create or find the Experiment before browser upload."
+    },
+    {
+      "id": "experiment_id_create",
+      "question": "How do I create the Experiment ID?",
+      "answer": "In Slack Home choose Record new experiment, then Save & continue. Plan an experiment is not the Experiment record ID."
     },
     {
       "id": "capture_boundary",
@@ -130,18 +140,18 @@
     },
     {
       "id": "multiple_packages",
-      "question": "Can I add several registered data sets to one Experiment?",
-      "answer": "Yes. Upload and explain one CAP package, then choose Add another registered package."
+      "question": "Can Raman, photographs and SEM data use one Experiment ID?",
+      "answer": "Yes. Keep scientifically distinct data in separate Captures and packages, then add each registered package to the same Experiment."
     },
     {
       "id": "later_data",
       "question": "Can I add data after submitting the Experiment?",
-      "answer": "Yes. LabMate creates a separate Additional Data submission and keeps the original submission unchanged."
+      "answer": "Yes. LabMate creates or resumes a separate Additional Data submission and keeps the original submission unchanged."
     },
     {
       "id": "desktop_entry",
       "question": "Can I start upload from the desktop application?",
-      "answer": "Yes. Upload this package now opens the secure browser uploader."
+      "answer": "Yes. Continue to web upload opens the secure browser uploader after local export verification."
     },
     {
       "id": "slack_entry",
@@ -151,7 +161,88 @@
     {
       "id": "done",
       "question": "When am I completely finished?",
-      "answer": "After every package is explained, final review is submitted and Slack sends a receipt."
+      "answer": "After every intended package is verified and explained, final review is submitted and Slack sends a receipt and Receipt ID."
     }
-  ]
+  ],
+  "facility_transfer": {
+    "source_path": "shared_facility",
+    "operations": [
+      "Keep the facility-delivered original files unchanged.",
+      "Copy the unchanged delivery to a USB drive.",
+      "Bring the USB drive to your own computer.",
+      "Register the delivered originals on that computer promptly."
+    ],
+    "assurance_boundary": "RAW — REGISTERED begins at registration on your computer. It does not verify the earlier facility or USB-copy history."
+  },
+  "experiment_id_decision": {
+    "question": "Do you know the LabMate Experiment ID for these files?",
+    "known": {
+      "desktop_choice": "YES — I KNOW THE ID",
+      "action": "Enter the saved LabMate Experiment ID in Raw Data Register."
+    },
+    "unknown": {
+      "desktop_choice": "NO — I DO NOT HAVE AN ID YET",
+      "registration_action": "Register the Capture now; an Experiment ID is not required for offline registration.",
+      "before_web_upload": [
+        "Open LabMate Home in Slack.",
+        "Choose Record new experiment.",
+        "Choose Save & continue.",
+        "Use the generated Experiment ID when the browser uploader asks which Experiment these files belong to."
+      ]
+    },
+    "not_equivalent": "Plan an experiment is optional planning context and does not create the Experiment record ID used for data submission.",
+    "required_for": "The Experiment must be created and selected before browser upload."
+  },
+  "verification_checkpoints": [
+    {
+      "id": "raw_registered",
+      "stage": 1,
+      "label": "RAW — REGISTERED",
+      "system": "desktop",
+      "complete_when": "Raw Data Register has hashed the unchanged selected source files and written the Capture manifest."
+    },
+    {
+      "id": "local_export_verified",
+      "stage": 2,
+      "label": "LOCAL EXPORT VERIFIED",
+      "system": "desktop",
+      "complete_when": "Raw Data Register has reopened the exported destination and verified its bytes."
+    },
+    {
+      "id": "transfer_integrity_confirmed",
+      "stage": 2,
+      "label": "TRANSFER INTEGRITY CONFIRMED",
+      "system": "web",
+      "complete_when": "LabMate has received every package file and matched its registered SHA-256 fingerprint."
+    },
+    {
+      "id": "explanation_complete",
+      "stage": 2,
+      "label": "EXPLANATION COMPLETE",
+      "system": "web",
+      "complete_when": "The data-set card has its required scientific explanation saved."
+    },
+    {
+      "id": "slack_receipt",
+      "stage": 3,
+      "label": "SLACK RECEIPT",
+      "system": "slack",
+      "complete_when": "Slack shows the final receipt and Receipt ID."
+    }
+  ],
+  "same_experiment_multiple_data": {
+    "rule": "Different data sets may belong to the same Experiment and use the same Experiment ID.",
+    "separate_capture_when": [
+      "The source or instrument is different.",
+      "The acquisition session is different.",
+      "The scientific meaning should be explained separately."
+    ],
+    "examples": [
+      "Raman measurement",
+      "Fixture photographs",
+      "SEM data"
+    ],
+    "loop": "For every registered data set, export and verify its package, upload and verify it, then complete its explanation before adding the next package.",
+    "after_submission": "New data for a submitted Experiment opens or resumes append-only Additional Data and never changes the original submission."
+  }
 }

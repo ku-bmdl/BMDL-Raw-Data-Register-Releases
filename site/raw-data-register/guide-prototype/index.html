@@ -1,18 +1,17 @@
 <!doctype html>
 <!--
   PROTOTYPE — do not publish as the final student guide.
-  Question: which of three structures makes the registered-RAW submission
-  workflow easiest for a first-time student to understand?
-  Switch with ?variant=cards, ?variant=wizard, or ?variant=map.
+  Question: which interactive map makes the registered-RAW workflow clearest?
+  Switch with ?variant=journey or ?variant=hub.
 -->
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow, noarchive">
-    <meta name="description" content="Prototype of a three-step guide for registering and submitting BMDL raw data.">
+    <meta name="description" content="Prototype comparison of two three-stage maps for registering and submitting BMDL raw data.">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
-    <title>BMDL · Three-step registered RAW guide prototype</title>
+    <title>BMDL · Registered RAW map comparison</title>
     <link rel="stylesheet" href="guide.css">
     <script id="flow-contract" type="application/json">
     {
@@ -50,12 +49,12 @@
         {
           "id": "lab_instrument",
           "label": "Lab instrument or your own setup",
-          "instruction": "For an instrument, custom board or software recording on your own computer, wait until writing stops and then register on that acquisition computer before the first copy whenever possible."
+          "instruction": "For a lab instrument, custom board or software recording on your own computer, wait until recording and file writing stop, then register the unchanged files on that acquisition computer before the first copy whenever possible."
         },
         {
           "id": "shared_facility",
           "label": "Shared or core facility",
-          "instruction": "Keep the original delivery unchanged and register it on the first BMDL-controlled computer immediately after receipt."
+          "instruction": "Keep the delivered originals unchanged, carry them by USB to your own computer and register them there promptly before renaming, converting or analysing them."
         }
       ],
       "capture_boundary": {
@@ -99,7 +98,7 @@
       },
       "add_data_loop": {
         "operations": [
-          "PREPARE PACKAGE",
+          "EXPORT / COPY PACKAGE",
           "UPLOAD & VERIFY",
           "EXPLAIN THIS PACKAGE",
           "ADD ANOTHER REGISTERED PACKAGE"
@@ -115,7 +114,7 @@
       },
       "assurance": [
         "RAW — REGISTERED",
-        "LOCAL PACKAGE VERIFIED",
+        "LOCAL EXPORT VERIFIED",
         "TRANSFER INTEGRITY CONFIRMED",
         "SOURCE VERIFICATION — NOT PERFORMED IN V1"
       ],
@@ -128,7 +127,17 @@
         {
           "id": "timing_facility",
           "question": "What if the files came from a shared facility?",
-          "answer": "Register the unchanged original delivery immediately after receiving it, before changing or analysing anything."
+          "answer": "Keep the delivered originals unchanged, bring them by USB to your own computer and register them there promptly before changing or analysing anything."
+        },
+        {
+          "id": "experiment_id_before_register",
+          "question": "Do I need an Experiment ID before registration?",
+          "answer": "No. Choose NO in Raw Data Register and register offline now. Create or find the Experiment before browser upload."
+        },
+        {
+          "id": "experiment_id_create",
+          "question": "How do I create the Experiment ID?",
+          "answer": "In Slack Home choose Record new experiment, then Save & continue. Plan an experiment is not the Experiment record ID."
         },
         {
           "id": "capture_boundary",
@@ -147,18 +156,18 @@
         },
         {
           "id": "multiple_packages",
-          "question": "Can I add several registered data sets to one Experiment?",
-          "answer": "Yes. Upload and explain one CAP package, then choose Add another registered package."
+          "question": "Can Raman, photographs and SEM data use one Experiment ID?",
+          "answer": "Yes. Keep scientifically distinct data in separate Captures and packages, then add each registered package to the same Experiment."
         },
         {
           "id": "later_data",
           "question": "Can I add data after submitting the Experiment?",
-          "answer": "Yes. LabMate creates a separate Additional Data submission and keeps the original submission unchanged."
+          "answer": "Yes. LabMate creates or resumes a separate Additional Data submission and keeps the original submission unchanged."
         },
         {
           "id": "desktop_entry",
           "question": "Can I start upload from the desktop application?",
-          "answer": "Yes. Upload this package now opens the secure browser uploader."
+          "answer": "Yes. Continue to web upload opens the secure browser uploader after local export verification."
         },
         {
           "id": "slack_entry",
@@ -168,9 +177,90 @@
         {
           "id": "done",
           "question": "When am I completely finished?",
-          "answer": "After every package is explained, final review is submitted and Slack sends a receipt."
+          "answer": "After every intended package is verified and explained, final review is submitted and Slack sends a receipt and Receipt ID."
         }
-      ]
+      ],
+      "facility_transfer": {
+        "source_path": "shared_facility",
+        "operations": [
+          "Keep the facility-delivered original files unchanged.",
+          "Copy the unchanged delivery to a USB drive.",
+          "Bring the USB drive to your own computer.",
+          "Register the delivered originals on that computer promptly."
+        ],
+        "assurance_boundary": "RAW — REGISTERED begins at registration on your computer. It does not verify the earlier facility or USB-copy history."
+      },
+      "experiment_id_decision": {
+        "question": "Do you know the LabMate Experiment ID for these files?",
+        "known": {
+          "desktop_choice": "YES — I KNOW THE ID",
+          "action": "Enter the saved LabMate Experiment ID in Raw Data Register."
+        },
+        "unknown": {
+          "desktop_choice": "NO — I DO NOT HAVE AN ID YET",
+          "registration_action": "Register the Capture now; an Experiment ID is not required for offline registration.",
+          "before_web_upload": [
+            "Open LabMate Home in Slack.",
+            "Choose Record new experiment.",
+            "Choose Save & continue.",
+            "Use the generated Experiment ID when the browser uploader asks which Experiment these files belong to."
+          ]
+        },
+        "not_equivalent": "Plan an experiment is optional planning context and does not create the Experiment record ID used for data submission.",
+        "required_for": "The Experiment must be created and selected before browser upload."
+      },
+      "verification_checkpoints": [
+        {
+          "id": "raw_registered",
+          "stage": 1,
+          "label": "RAW — REGISTERED",
+          "system": "desktop",
+          "complete_when": "Raw Data Register has hashed the unchanged selected source files and written the Capture manifest."
+        },
+        {
+          "id": "local_export_verified",
+          "stage": 2,
+          "label": "LOCAL EXPORT VERIFIED",
+          "system": "desktop",
+          "complete_when": "Raw Data Register has reopened the exported destination and verified its bytes."
+        },
+        {
+          "id": "transfer_integrity_confirmed",
+          "stage": 2,
+          "label": "TRANSFER INTEGRITY CONFIRMED",
+          "system": "web",
+          "complete_when": "LabMate has received every package file and matched its registered SHA-256 fingerprint."
+        },
+        {
+          "id": "explanation_complete",
+          "stage": 2,
+          "label": "EXPLANATION COMPLETE",
+          "system": "web",
+          "complete_when": "The data-set card has its required scientific explanation saved."
+        },
+        {
+          "id": "slack_receipt",
+          "stage": 3,
+          "label": "SLACK RECEIPT",
+          "system": "slack",
+          "complete_when": "Slack shows the final receipt and Receipt ID."
+        }
+      ],
+      "same_experiment_multiple_data": {
+        "rule": "Different data sets may belong to the same Experiment and use the same Experiment ID.",
+        "separate_capture_when": [
+          "The source or instrument is different.",
+          "The acquisition session is different.",
+          "The scientific meaning should be explained separately."
+        ],
+        "examples": [
+          "Raman measurement",
+          "Fixture photographs",
+          "SEM data"
+        ],
+        "loop": "For every registered data set, export and verify its package, upload and verify it, then complete its explanation before adding the next package.",
+        "after_submission": "New data for a submitted Experiment opens or resumes append-only Additional Data and never changes the original submission."
+      }
     }
     </script>
     <script defer src="guide.js"></script>
@@ -190,9 +280,9 @@
     <main>
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">Student field guide · Registered RAW</p>
-        <h1 id="page-title">Three steps. One receipt.</h1>
-        <p class="lede">Register each coherent data set, add every package that belongs to the Experiment, then review and submit. This page guides you; it never reads or uploads your files.</p>
-        <div class="global-rail" aria-label="Three-step registered RAW submission">
+        <h1 id="page-title">Three stages. Every proof visible.</h1>
+        <p class="lede">Register each coherent data set, add every package that belongs to the Experiment, then review and submit. This guide never reads or uploads your files.</p>
+        <div class="global-rail" aria-label="Three-stage registered RAW submission">
           <span><b>1</b><strong>Register</strong></span>
           <i aria-hidden="true">→</i>
           <span><b>2</b><strong>Add data</strong></span>
@@ -203,50 +293,32 @@
 
       <section class="prototype-context" aria-labelledby="prototype-title">
         <div>
-          <p class="eyebrow">Design comparison</p>
-          <h2 id="prototype-title">Same rules, three different structures</h2>
+          <p class="eyebrow">Map comparison</p>
+          <h2 id="prototype-title">Same workflow, two mental models</h2>
         </div>
-        <p>Use the floating arrows or your keyboard’s left/right arrow keys. The selected variant stays in the URL so the exact view can be shared for review.</p>
+        <p>C1 emphasizes what happens next. C2 emphasizes how several separate data sets can belong to one Experiment. Use the floating arrows or keyboard left/right arrows to compare them.</p>
       </section>
 
-      <section id="variant-cards" class="variant" data-variant="cards" hidden aria-labelledby="cards-title">
+      <section id="variant-journey" class="variant" data-variant="journey" hidden aria-labelledby="journey-title">
         <header class="variant-heading">
-          <p class="variant-letter">A</p>
-          <div><p class="eyebrow">Linear cards</p><h2 id="cards-title">See the whole journey at once</h2></div>
+          <p class="variant-letter">C1</p>
+          <div><p class="eyebrow">Guided journey map</p><h2 id="journey-title">Follow the main path and its decisions</h2></div>
         </header>
-        <div id="cards-root"></div>
+        <div id="journey-root"></div>
+        <aside id="journey-detail" class="map-detail-panel" aria-live="polite"></aside>
       </section>
 
-      <section id="variant-wizard" class="variant" data-variant="wizard" hidden aria-labelledby="wizard-title">
+      <section id="variant-hub" class="variant" data-variant="hub" hidden aria-labelledby="hub-title">
         <header class="variant-heading">
-          <p class="variant-letter">B</p>
-          <div><p class="eyebrow">Guided wizard</p><h2 id="wizard-title">Answer one decision at a time</h2></div>
+          <p class="variant-letter">C2</p>
+          <div><p class="eyebrow">Experiment hub map</p><h2 id="hub-title">See every data set around one Experiment</h2></div>
         </header>
-        <div class="wizard-shell">
-          <div class="wizard-progress">
-            <span id="wizard-step-label">Step 1 of 3 · Register</span>
-            <progress id="wizard-progress" max="3" value="1">1 of 3</progress>
-          </div>
-          <div id="wizard-root" aria-live="polite"></div>
-        </div>
-      </section>
-
-      <section id="variant-map" class="variant" data-variant="map" hidden aria-labelledby="map-title">
-        <header class="variant-heading">
-          <p class="variant-letter">C</p>
-          <div><p class="eyebrow">Interactive map</p><h2 id="map-title">Start where you are</h2></div>
-        </header>
-        <div class="map-layout">
-          <div id="map-root" class="journey-map" aria-label="Interactive registered RAW journey map"></div>
-          <aside id="map-detail" class="map-detail" aria-live="polite"></aside>
-        </div>
+        <div id="hub-root"></div>
+        <aside id="hub-detail" class="map-detail-panel" aria-live="polite"></aside>
       </section>
 
       <section class="stuck" aria-labelledby="stuck-title">
-        <div>
-          <p class="eyebrow">Fast recovery</p>
-          <h2 id="stuck-title">I’m stuck. What do I do?</h2>
-        </div>
+        <div><p class="eyebrow">Fast recovery</p><h2 id="stuck-title">I’m stuck. What do I do?</h2></div>
         <div class="stuck-layout">
           <div class="stuck-choices" role="list" aria-label="Common problems">
             <button type="button" data-stuck="writing">The instrument is still writing</button>
@@ -272,13 +344,13 @@
 
       <noscript>
         <section class="noscript-guide">
-          <h2>Three-step registered RAW guide</h2>
+          <h2>Three-stage registered RAW guide</h2>
           <ol>
-            <li><strong>Register.</strong> Wait for file writing to finish. Register promptly on the instrument computer, or register an unchanged facility delivery immediately after receipt.</li>
-            <li><strong>Add data.</strong> Prepare, upload, verify and explain one complete CAP package. Choose Add another registered package when more data belongs to the Experiment.</li>
-            <li><strong>Review and submit.</strong> Check every data-set card, submit the final review and keep the Slack receipt.</li>
+            <li><strong>Register.</strong> Wait for writing to stop. For facility data, keep the delivery unchanged, bring it by USB to your own computer and register it there promptly. An Experiment ID may be added later.</li>
+            <li><strong>Add data.</strong> Export, locally verify, upload, transfer-verify and explain one complete package. Repeat for every separate data set belonging to the Experiment.</li>
+            <li><strong>Review and submit.</strong> Check every data-set card, submit the final review and keep the Slack receipt and Receipt ID.</li>
           </ol>
-          <p>One Capture requires one Experiment, one source and acquisition session, and one coherent data set that you would explain together.</p>
+          <p>Different source, acquisition session or scientific meaning means a separate Capture—even when every Capture belongs to the same Experiment.</p>
         </section>
       </noscript>
     </main>
@@ -286,8 +358,8 @@
     <div id="prototype-switcher" class="prototype-switcher" aria-label="Prototype variant switcher">
       <button id="previous-variant" type="button" aria-label="Previous prototype variant">←</button>
       <div>
-        <strong id="variant-label">B — Guided wizard</strong>
-        <span id="prototype-state">Variant B · Wizard screen: source</span>
+        <strong id="variant-label">C1 — Guided journey</strong>
+        <span id="prototype-state">Variant C1 · Selected: Register</span>
       </div>
       <button id="next-variant" type="button" aria-label="Next prototype variant">→</button>
     </div>
