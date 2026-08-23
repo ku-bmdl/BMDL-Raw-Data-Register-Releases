@@ -123,10 +123,21 @@ const mapNodes = {
   },
 };
 
-async function boot() {
+function readEmbeddedContract() {
+  const node = document.getElementById("flow-contract");
+  if (!node) throw new Error("The embedded prototype contract is missing.");
+  return JSON.parse(node.textContent);
+}
+
+async function loadContract() {
+  if (window.location.protocol === "file:") return readEmbeddedContract();
   const response = await fetch("flow-v1.json", {cache: "no-store"});
   if (!response.ok) throw new Error("The prototype contract could not be loaded.");
-  contract = await response.json();
+  return response.json();
+}
+
+async function boot() {
+  contract = await loadContract();
   renderCards();
   renderWizard();
   renderMap();

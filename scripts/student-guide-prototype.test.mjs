@@ -97,3 +97,15 @@ test("prototype has one-command local preview", () => {
     "python3 -m http.server 4174 --directory site",
   );
 });
+
+test("direct file preview boots from an embedded copy of the contract", () => {
+  const embeddedMatch = guide.match(
+    /<script id="flow-contract" type="application\/json">([\s\S]*?)<\/script>/,
+  );
+
+  assert.ok(embeddedMatch, "the guide must carry a file://-safe contract fallback");
+  assert.deepEqual(JSON.parse(embeddedMatch[1]), contract);
+  assert.match(guide, /<script defer src="guide\.js"><\/script>/);
+  assert.doesNotMatch(guide, /<script type="module" src="guide\.js"><\/script>/);
+  assert.match(runtime, /window\.location\.protocol === "file:"/);
+});

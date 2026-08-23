@@ -14,7 +14,166 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
     <title>BMDL · Three-step registered RAW guide prototype</title>
     <link rel="stylesheet" href="guide.css">
-    <script type="module" src="guide.js"></script>
+    <script id="flow-contract" type="application/json">
+    {
+      "contract_version": "registered-raw-student-flow-v1",
+      "status": "prototype",
+      "language": "en",
+      "scope": "registered_raw_submission",
+      "steps": [
+        {
+          "id": "register",
+          "number": 1,
+          "label": "REGISTER",
+          "title": "Register each data set",
+          "summary": "Register promptly after file writing or facility delivery, before renaming, editing, converting or analysing the files.",
+          "complete_when": "RAW — REGISTERED"
+        },
+        {
+          "id": "add_data",
+          "number": 2,
+          "label": "ADD DATA",
+          "title": "Add one or more registered packages",
+          "summary": "Prepare, upload, verify and explain one complete CAP package at a time. Repeat for every data set that belongs to the Experiment.",
+          "complete_when": "Every intended package shows TRANSFER INTEGRITY CONFIRMED and has an explanation."
+        },
+        {
+          "id": "review_submit",
+          "number": 3,
+          "label": "REVIEW & SUBMIT",
+          "title": "Review the Experiment and submit",
+          "summary": "Check every data-set card, answer the final questions and keep the Slack receipt.",
+          "complete_when": "Slack shows a receipt and Receipt ID."
+        }
+      ],
+      "source_paths": [
+        {
+          "id": "lab_instrument",
+          "label": "Lab instrument or your own setup",
+          "instruction": "For an instrument, custom board or software recording on your own computer, wait until writing stops and then register on that acquisition computer before the first copy whenever possible."
+        },
+        {
+          "id": "shared_facility",
+          "label": "Shared or core facility",
+          "instruction": "Keep the original delivery unchanged and register it on the first BMDL-controlled computer immediately after receipt."
+        }
+      ],
+      "capture_boundary": {
+        "all_required": [
+          "All selected files belong to one scientific Experiment.",
+          "All selected files came from one instrument or source and one acquisition session.",
+          "All selected files can be explained together as one coherent data set."
+        ],
+        "rules": [
+          "Different Experiment: create a different Experiment record and Capture.",
+          "Same Experiment but different instrument, source or acquisition session: create separate Captures.",
+          "Same Experiment and session but different scientific meaning: create separate Captures.",
+          "File extension alone never decides the Capture boundary."
+        ],
+        "examples": [
+          {
+            "files": "Raman CSV and settings from one run",
+            "decision": "one_capture"
+          },
+          {
+            "files": "Custom-board log and software metadata from one recording session",
+            "decision": "one_capture"
+          },
+          {
+            "files": "SEM images and instrument metadata from one session",
+            "decision": "one_capture"
+          },
+          {
+            "files": "Raman CSV and SEM images from the same Experiment",
+            "decision": "separate_captures"
+          },
+          {
+            "files": "Fixture photographs and measurement CSV with different meanings",
+            "decision": "separate_captures"
+          },
+          {
+            "files": "Similar CSV files from different Experiments",
+            "decision": "separate_experiments"
+          }
+        ]
+      },
+      "add_data_loop": {
+        "operations": [
+          "PREPARE PACKAGE",
+          "UPLOAD & VERIFY",
+          "EXPLAIN THIS PACKAGE",
+          "ADD ANOTHER REGISTERED PACKAGE"
+        ],
+        "single_transfer_at_a_time": true,
+        "explain_before_next_package": true,
+        "later_data": "Select the same Experiment. LabMate creates or resumes an append-only Additional Data submission without changing the original submission."
+      },
+      "entry_points": {
+        "desktop": "The desktop application may open the secure browser uploader after a package is locally verified.",
+        "slack": "Slack may open the same LabMate registered-RAW handoff.",
+        "credential_boundary": "Google sign-in and file transfer remain in the browser; the desktop application does not receive Google credentials."
+      },
+      "assurance": [
+        "RAW — REGISTERED",
+        "LOCAL PACKAGE VERIFIED",
+        "TRANSFER INTEGRITY CONFIRMED",
+        "SOURCE VERIFICATION — NOT PERFORMED IN V1"
+      ],
+      "faq": [
+        {
+          "id": "timing_lab",
+          "question": "What if an instrument, custom board or my own computer recorded the data?",
+          "answer": "As soon as recording and file writing stop, register the unchanged files—preferably on that acquisition computer."
+        },
+        {
+          "id": "timing_facility",
+          "question": "What if the files came from a shared facility?",
+          "answer": "Register the unchanged original delivery immediately after receiving it, before changing or analysing anything."
+        },
+        {
+          "id": "capture_boundary",
+          "question": "Which files belong in one Capture?",
+          "answer": "Files from one Experiment, one source and acquisition session, and one coherent data set that you would explain together."
+        },
+        {
+          "id": "different_types",
+          "question": "Can different file types be one Capture?",
+          "answer": "Yes, when the same acquisition produced them and you would explain them together."
+        },
+        {
+          "id": "similar_files",
+          "question": "Can similar files from different Experiments be one Capture?",
+          "answer": "No. Similar names or extensions do not make files part of one Capture."
+        },
+        {
+          "id": "multiple_packages",
+          "question": "Can I add several registered data sets to one Experiment?",
+          "answer": "Yes. Upload and explain one CAP package, then choose Add another registered package."
+        },
+        {
+          "id": "later_data",
+          "question": "Can I add data after submitting the Experiment?",
+          "answer": "Yes. LabMate creates a separate Additional Data submission and keeps the original submission unchanged."
+        },
+        {
+          "id": "desktop_entry",
+          "question": "Can I start upload from the desktop application?",
+          "answer": "Yes. Upload this package now opens the secure browser uploader."
+        },
+        {
+          "id": "slack_entry",
+          "question": "Do I have to start upload from Slack?",
+          "answer": "No, if the Experiment record already exists. Slack and the desktop application open the same LabMate upload system."
+        },
+        {
+          "id": "done",
+          "question": "When am I completely finished?",
+          "answer": "After every package is explained, final review is submitted and Slack sends a receipt."
+        }
+      ]
+    }
+    </script>
+    <script defer src="guide.js"></script>
   </head>
   <body>
     <header class="site-header">
