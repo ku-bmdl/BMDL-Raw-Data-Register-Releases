@@ -14,8 +14,7 @@ function createFlowState() {
     history: [],
     source: null,
     ready: null,
-    idKnown: null,
-    idCreated: false,
+    experimentReady: false,
     captureAnswers: [null, null, null],
     captureNeedsSplit: false,
     registered: false,
@@ -28,7 +27,7 @@ function createFlowState() {
 }
 
 function checkpoint(id) {
-  return contract.verification_checkpoints.find(item => item.id === id);
+  return contract.checkpoints.find(item => item.id === id);
 }
 
 function option(value, label, detail = "", tone = "") {
@@ -86,20 +85,6 @@ function currentStep() {
     };
   }
 
-  if (state.idKnown === null) {
-    return {
-      id: "experiment-id",
-      stage: 1,
-      eyebrow: dataLabel + " · Experiment link",
-      question: "Do you know the LabMate Experiment ID?",
-      help: "You may register offline without an ID. The ID is required before browser upload.",
-      options: [
-        option("yes", "YES — I KNOW IT", "Enter the saved Experiment ID in Raw Data Register.", "primary"),
-        option("no", "NO — REGISTER WITHOUT IT", "The Slack ID step will appear before upload."),
-      ],
-    };
-  }
-
   if (state.captureNeedsSplit) {
     return {
       id: "capture-split",
@@ -118,7 +103,7 @@ function currentStep() {
       id: "capture-" + captureIndex,
       stage: 1,
       eyebrow: dataLabel + " · Capture check " + (captureIndex + 1) + " of 3",
-      question: contract.capture_boundary.all_required[captureIndex],
+      question: contract.capture_boundary.one_capture_when[captureIndex],
       help: "All three answers must be YES before these files become one Capture.",
       options: [
         option("yes", "YES", "This condition is true.", "primary"),
@@ -151,14 +136,17 @@ function currentStep() {
     };
   }
 
-  if (state.idKnown === "no" && !state.idCreated) {
+  if (!state.experimentReady) {
     return {
-      id: "create-id",
+      id: "experiment-record",
       stage: 2,
-      eyebrow: dataLabel + " · Required before upload",
-      question: "Create the Experiment ID in Slack now.",
-      help: "Slack Home → Record new experiment → Save & continue. Plan an experiment does not create this ID.",
-      options: [option("confirmed", "I NOW HAVE THE EXPERIMENT ID", "Use it when the uploader asks where this package belongs.", "primary")],
+      eyebrow: dataLabel + " · Verified browser",
+      question: "How will you connect this package to an Experiment?",
+      help: "After Google verifies your institutional account, select an existing Experiment or create a new one with the full form. Slack offers the same form but is optional.",
+      options: [
+        option("existing", "SELECT EXISTING EXPERIMENT", "Choose the matching Experiment in the browser.", "primary"),
+        option("create", "CREATE NEW EXPERIMENT", "Create the record in the browser, or use Record new experiment in Slack."),
+      ],
     };
   }
 
@@ -168,7 +156,7 @@ function currentStep() {
       stage: 2,
       eyebrow: dataLabel + " · Browser checkpoint",
       question: "Choose the Experiment, upload and verify the package.",
-      help: "Desktop or Slack opens the same secure uploader. Select the outer CAP folder; do not ZIP it.",
+      help: "The desktop or Slack opens the same secure uploader. A desktop CAP handoff takes the registered RAW path automatically. Select the outer CAP folder; do not ZIP it.",
       proof: checkpoint("transfer_integrity_confirmed").label,
       options: [option("confirmed", "I SEE TRANSFER INTEGRITY CONFIRMED", "The uploaded bytes match the registered fingerprints.", "primary")],
     };
@@ -207,8 +195,8 @@ function currentStep() {
       eyebrow: "Whole Experiment · Final check",
       question: "Review every data-set card and submit once.",
       help: "Resolve missing explanations, answer the final questions and wait for the Slack receipt.",
-      proof: checkpoint("slack_receipt").label,
-      options: [option("confirmed", "I HAVE THE SLACK RECEIPT", "Keep the Receipt ID. The submission is complete.", "primary")],
+      proof: checkpoint("final_receipt").label,
+      options: [option("confirmed", "I HAVE THE FINAL RECEIPT", "Keep the Receipt ID. Slack will also deliver it.", "primary")],
     };
   }
 
@@ -218,7 +206,7 @@ function currentStep() {
     eyebrow: "Submission complete",
     question: "Done — keep the Slack receipt and Receipt ID.",
     help: "If new data arrives later, select this same Experiment and use append-only Additional Data.",
-    proof: checkpoint("slack_receipt").label,
+    proof: checkpoint("final_receipt").label,
     options: [],
     done: true,
   };
@@ -241,9 +229,6 @@ function handleChoice(value) {
   } else if (step.id === "ready-resume") {
     state.ready = "yes";
     addHistory(1, "Safe pause", "Files are ready now");
-  } else if (step.id === "experiment-id") {
-    state.idKnown = value;
-    addHistory(1, "Experiment ID known?", value === "yes" ? "YES — enter it" : "NO — create before upload");
   } else if (step.id === "capture-split") {
     state.captureNeedsSplit = false;
     state.captureAnswers = [null, null, null];
@@ -263,10 +248,9 @@ function handleChoice(value) {
   } else if (step.id === "export") {
     state.exported = true;
     addHistory(2, "Package export", checkpoint("local_export_verified").label);
-  } else if (step.id === "create-id") {
-    state.idCreated = true;
-    state.idKnown = "yes";
-    addHistory(2, "Slack Experiment record", "Experiment ID created");
+  } else if (step.id === "experiment-record") {
+    state.experimentReady = true;
+    addHistory(2, "Experiment record", value === "existing" ? "Select existing in browser" : "Create in browser or Slack");
   } else if (step.id === "upload") {
     state.uploaded = true;
     addHistory(2, "Browser upload", checkpoint("transfer_integrity_confirmed").label);
@@ -292,7 +276,7 @@ function handleChoice(value) {
     }
   } else if (step.id === "review") {
     state.submitted = true;
-    addHistory(3, "Final review and submit", checkpoint("slack_receipt").label);
+    addHistory(3, "Final review and submit", checkpoint("final_receipt").label);
   }
 
   renderInteractiveFlow();
@@ -347,7 +331,7 @@ function downArrow(label = "") {
 
 function stageMeter(activeStage) {
   return '<div class="interactive-stage-meter" aria-label="Three submission stages">' +
-    contract.steps.map(step => {
+    contract.stages.map(step => {
       const stateClass = step.number < activeStage ? "complete" : step.number === activeStage ? "current" : "future";
       return '<span class="' + stateClass + '"><b>' + step.number + '</b><strong>' + escapeHtml(step.label) + '</strong></span>';
     }).join('<i aria-hidden="true">→</i>') + '</div>';
@@ -408,25 +392,63 @@ function wireFlowControls() {
 function readEmbeddedContract() {
   const node = document.getElementById("flow-contract");
   if (!node) throw new Error("The embedded guide contract is missing.");
-  return JSON.parse(node.textContent);
+  const legacy = JSON.parse(node.textContent);
+  const faq = (legacy.faq || []).map(item => {
+    if (item.id === "experiment_id_create") return {
+      ...item,
+      question: "How do I create the Experiment?",
+      answer: "Choose Create new experiment after the verified browser opens, or use Record new experiment in Slack. Both create the same record; Slack is optional.",
+    };
+    if (item.id === "slack_entry") return {
+      ...item,
+      question: "Do I have to use Slack?",
+      answer: "No. The desktop opens the verified browser, where you can select or create the Experiment. Slack is an equal alternative.",
+    };
+    return item;
+  });
+  faq.push(
+    {question: "Can I submit an Experiment with no files?", answer: "No. A registered-RAW submission needs at least one described data set."},
+    {question: "Is the transfer-confirmed Slack message the final receipt?", answer: "No. It is a Stage 2 checkpoint. Complete every explanation and Stage 3 to receive the final Receipt ID."},
+    {question: "What if I have supporting or processed files?", answer: "Choose Supporting / processed in LabMate. That path can add evidence to the Experiment but never claims RAW — REGISTERED."},
+  );
+  return {
+    ...legacy,
+    contract_version: "registered-raw-student-flow-v2",
+    status: "active",
+    stages: legacy.steps,
+    capture_boundary: {
+      ...legacy.capture_boundary,
+      one_capture_when: legacy.capture_boundary.all_required,
+    },
+    checkpoints: legacy.verification_checkpoints.map(item =>
+      item.id === "slack_receipt"
+        ? {...item, id: "final_receipt", label: "FINAL RECEIPT"}
+        : item),
+    entry_rules: {
+      desktop_experiment_id: "An Experiment ID is optional during offline desktop registration.",
+      browser_identity: "Select or create the Experiment after institutional Google verification.",
+    },
+    data_kind_gate: {
+      registered_raw: "A desktop CAP handoff automatically uses registered RAW.",
+      supporting_or_processed: "Supporting or processed files never receive RAW — REGISTERED status.",
+    },
+    submission_rules: {
+      at_least_one_data_set_required: true,
+      context_only_submission_available: false,
+    },
+    faq,
+  };
 }
 
 async function loadContract() {
   if (window.location.protocol === "file:") return readEmbeddedContract();
-  const response = await fetch("flow-v1.json", {cache: "no-store"});
+  const response = await fetch("flow-v2.json", {cache: "no-store"});
   if (!response.ok) throw new Error("The guide contract could not be loaded.");
   return response.json();
 }
 
 function renderFaq() {
-  const topIds = new Set([
-    "timing_lab", "timing_facility", "experiment_id_before_register",
-    "experiment_id_create", "multiple_packages", "done",
-  ]);
-  const ordered = [
-    ...contract.faq.filter(item => topIds.has(item.id)),
-    ...contract.faq.filter(item => !topIds.has(item.id)),
-  ];
+  const ordered = contract.faq;
   document.getElementById("faq-root").innerHTML = [
     '<div class="faq-list">',
     ordered.map((item, index) => [
@@ -446,9 +468,9 @@ const stuckAnswers = {
     body: "Leave the files where they are. Start registration as soon as recording and file writing have stopped.",
   },
   "no-id": {
-    step: "Stage 1 · Experiment ID",
-    title: "Choose NO and register now.",
-    body: "Before browser upload, open Slack Home → Record new experiment → Save & continue. Plan an experiment is not the submission ID.",
+    step: "Stage 1 · Register now",
+    title: "You do not need an ID for desktop registration.",
+    body: "Register the unchanged files now. In the verified browser, select an existing Experiment or choose Create new experiment. Record new experiment in Slack is an equal alternative, not a prerequisite.",
   },
   facility: {
     step: "Stage 1 · Shared facility",
@@ -463,7 +485,7 @@ const stuckAnswers = {
   receipt: {
     step: "Stage 3 · Review & submit",
     title: "You are not finished yet.",
-    body: "Return to the Experiment, finish every package explanation and submit final review. Done means Slack shows a receipt and Receipt ID.",
+    body: "The transfer-confirmed Slack message is only a Stage 2 checkpoint. Return to the Experiment, finish every package explanation and submit final review. Done means LabMate shows the final receipt and Slack delivers its Receipt ID.",
   },
 };
 
