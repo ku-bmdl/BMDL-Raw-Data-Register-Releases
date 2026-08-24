@@ -171,6 +171,38 @@ function validateChecksums(assetsDir, manifest) {
   }
 }
 
+function validateWindowsDistribution(windows, { releaseChannel, channel }) {
+  if (windows?.status === "deferred") {
+    if (
+      releaseChannel !== "pilot"
+      || channel !== "pilot"
+      || JSON.stringify(Object.keys(windows).sort()) !== JSON.stringify(
+        ["product_url", "status", "store_id", "type"].sort(),
+      )
+      || windows.type !== "microsoft_store_msix"
+      || windows.store_id !== "9NTVDFKS4T1C"
+      || windows.product_url !== "https://apps.microsoft.com/detail/9NTVDFKS4T1C"
+    ) throw new Error("Deferred Windows Store distribution is valid only for a Mac-only pilot.");
+    return;
+  }
+  if (
+    windows?.type !== "microsoft_store_msix"
+    || windows.store_id !== "9NTVDFKS4T1C"
+    || windows.product_url !== "https://apps.microsoft.com/detail/9NTVDFKS4T1C"
+    || windows.package_identity_name !== "leventb.BMDLRawDataRegister"
+    || windows.package_identity_publisher !== "CN=EF6B9EC4-DC49-4498-A41D-05719C9D3681"
+    || windows.publisher_display_name !== "leventb"
+    || windows.package_family_name !== "leventb.BMDLRawDataRegister_b9aqxvjasx2jm"
+    || windows.package_version == null
+    || windows.certification?.status !== "certified"
+    || !windows.certification?.submission_id
+    || Number.isNaN(Date.parse(windows.certification?.certified_at))
+    || !/^[0-9a-f]{64}$/u.test(String(windows.submitted_candidate?.sha256 || ""))
+    || !Number.isSafeInteger(windows.submitted_candidate?.size_bytes)
+    || windows.submitted_candidate.size_bytes < 1
+  ) throw new Error("Certified Microsoft Store distribution provenance is incomplete or invalid.");
+}
+
 export function publishRelease({ event, assetsDir, siteDir, channelOverride = null }) {
   const release = event.release;
   if (!release?.published_at || release.draft) throw new Error("Only a published, non-draft release can update a channel.");
@@ -194,8 +226,10 @@ export function publishRelease({ event, assetsDir, siteDir, channelOverride = nu
   if (channel === "stable" && releaseChannel !== "stable") {
     throw new Error("A prerelease cannot be promoted to the stable channel.");
   }
+  const releaseToolCommit = String(manifest.release_tool_commit || "");
   if (
     !/^[0-9a-f]{40}$/iu.test(String(manifest.source_commit || ""))
+    || (releaseToolCommit && !/^[0-9a-f]{40}$/iu.test(releaseToolCommit))
     || Number.isNaN(Date.parse(manifest.built_at))
     || JSON.stringify(manifest.supported_manifest_schema_versions) !== JSON.stringify(["1.0"])
     || !manifest.signing?.apple?.team_id
@@ -203,24 +237,18 @@ export function publishRelease({ event, assetsDir, siteDir, channelOverride = nu
     || !manifest.signing?.updater?.key_id
   ) throw new Error("Release provenance or signing evidence is incomplete.");
   const windows = manifest.distribution?.windows;
-  if (
-    windows?.type !== "microsoft_store_msix"
-    || windows.store_id !== "9NTVDFKS4T1C"
-    || windows.product_url !== "https://apps.microsoft.com/detail/9NTVDFKS4T1C"
-    || windows.package_identity_name !== "leventb.BMDLRawDataRegister"
-    || windows.package_identity_publisher !== "CN=EF6B9EC4-DC49-4498-A41D-05719C9D3681"
-    || windows.publisher_display_name !== "leventb"
-    || windows.package_family_name !== "leventb.BMDLRawDataRegister_b9aqxvjasx2jm"
-    || windows.package_version !== expectedWindowsStorePackageVersion(feed.version)
-    || windows.certification?.status !== "certified"
-    || !windows.certification?.submission_id
-    || Number.isNaN(Date.parse(windows.certification?.certified_at))
+  validateWindowsDistribution(windows, { releaseChannel, channel });
+  if (windows?.status === "deferred") {
+    if (!/^[0-9a-f]{40}$/iu.test(releaseToolCommit)) {
+      throw new Error("A Mac-only pilot must record the exact release tool commit.");
+    }
+  } else if (
+    windows.package_version !== expectedWindowsStorePackageVersion(feed.version)
     || Date.parse(windows.certification.certified_at) > Date.parse(manifest.built_at)
     || windows.submitted_candidate?.name !== `BMDL-Raw-Data-Register_${feed.version}_x64.msix`
-    || !/^[0-9a-f]{64}$/u.test(String(windows.submitted_candidate?.sha256 || ""))
-    || !Number.isSafeInteger(windows.submitted_candidate?.size_bytes)
-    || windows.submitted_candidate.size_bytes < 1
-  ) throw new Error("Certified Microsoft Store distribution provenance is incomplete or invalid.");
+  ) {
+    throw new Error("Certified Microsoft Store distribution provenance is incomplete or invalid.");
+  }
   const approval = validateApproval(manifest.approval, {
     requireIndependent: releaseChannel === "stable",
   });

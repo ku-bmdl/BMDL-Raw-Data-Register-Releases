@@ -17,6 +17,85 @@ function sha256(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
+function macOnlyFixture(root, { version = "1.3.0-rc.6", prerelease = true } = {}) {
+  const assetsDir = join(root, "assets");
+  const siteDir = join(root, "site");
+  mkdirSync(assetsDir);
+  const tag = `v${version}`;
+  const names = [
+    `BMDL-Raw-Data-Register_${version}_universal.dmg`,
+    `BMDL-Raw-Data-Register_${version}_universal.app.tar.gz`,
+    `BMDL-Raw-Data-Register_${version}_universal.app.tar.gz.sig`,
+  ];
+  for (const name of names) {
+    writeFileSync(join(assetsDir, name), name.endsWith(".sig") ? "signature\n" : `bytes:${name}`);
+  }
+  const base = `https://github.com/ku-bmdl/BMDL-Raw-Data-Register-Releases/releases/download/${tag}`;
+  const feed = {
+    version,
+    notes: "Mac-only pilot",
+    pub_date: "2026-08-24T10:00:00.000Z",
+    platforms: {
+      "darwin-aarch64": { url: `${base}/${names[1]}`, signature: "signature" },
+      "darwin-x86_64": { url: `${base}/${names[1]}`, signature: "signature" },
+    },
+  };
+  const manifest = {
+    manifest_version: "1.0",
+    application_id: "edu.ku.bmdl.raw-data-register",
+    application_version: version,
+    channel: prerelease ? "pilot" : "stable",
+    source_commit: "a".repeat(40),
+    release_tool_commit: "c".repeat(40),
+    built_at: feed.pub_date,
+    supported_manifest_schema_versions: ["1.0"],
+    artifacts: names.map(name => ({
+      name,
+      size_bytes: readFileSync(join(assetsDir, name)).byteLength,
+      sha256: sha256(join(assetsDir, name)),
+    })),
+    signing: {
+      apple: { team_id: "TEAM", notarization_submission_id: "submission" },
+      updater: { key_id: "production-2026-01" },
+    },
+    distribution: {
+      windows: {
+        type: "microsoft_store_msix",
+        status: "deferred",
+        store_id: "9NTVDFKS4T1C",
+        product_url: "https://apps.microsoft.com/detail/9NTVDFKS4T1C",
+      },
+    },
+    approval: {
+      approved_by: prerelease ? "release-operator" : "pi-reviewer",
+      approved_at: "2026-08-20T10:00:00.000Z",
+      reference: "https://github.com/ku-bmdl/private-release-approvals/issues/17",
+      release_operator: "release-operator",
+    },
+    release_status: "verified",
+  };
+  writeFileSync(join(assetsDir, "tauri-update.json"), `${JSON.stringify(feed)}\n`);
+  writeFileSync(join(assetsDir, "release-manifest.json"), `${JSON.stringify(manifest)}\n`);
+  const checksumNames = [...names, "release-manifest.json", "tauri-update.json"];
+  writeFileSync(
+    join(assetsDir, "SHA256SUMS.txt"),
+    `${checksumNames.map(name => `${sha256(join(assetsDir, name))}  ${name}`).join("\n")}\n`,
+  );
+  return {
+    assetsDir,
+    siteDir,
+    manifest,
+    event: {
+      release: {
+        tag_name: tag,
+        published_at: feed.pub_date,
+        draft: false,
+        prerelease,
+      },
+    },
+  };
+}
+
 test("SemVer comparison only advances toward newer releases", () => {
   assert.equal(compareSemver("1.3.0-rc.2", "1.3.0-rc.1"), 1);
   assert.equal(compareSemver("1.3.0", "1.3.0-rc.2"), 1);
@@ -160,5 +239,61 @@ test("a verified stable build can be staged on pilot then promoted unchanged", (
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a Mac-only prerelease advances only pilot.json", () => {
+  const root = mkdtempSync(join(tmpdir(), "bmdl-mac-pilot-test-"));
+  try {
+    const fixture = macOnlyFixture(root);
+    assert.deepEqual(
+      publishRelease(fixture),
+      { channel: "pilot", version: "1.3.0-rc.6" },
+    );
+    assert.equal(
+      JSON.parse(readFileSync(join(fixture.siteDir, "pilot.json"), "utf8")).version,
+      "1.3.0-rc.6",
+    );
+    assert.throws(() => readFileSync(join(fixture.siteDir, "stable.json")), /ENOENT/);
+    assert.throws(() => readFileSync(join(fixture.siteDir, "release.json")), /ENOENT/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("stable and partial Windows records cannot use deferred pilot provenance", () => {
+  const stableRoot = mkdtempSync(join(tmpdir(), "bmdl-deferred-stable-test-"));
+  const partialRoot = mkdtempSync(join(tmpdir(), "bmdl-deferred-partial-test-"));
+  try {
+    const stable = macOnlyFixture(stableRoot, { version: "1.3.0", prerelease: false });
+    assert.throws(
+      () => publishRelease(stable),
+      /valid only for a Mac-only pilot/,
+    );
+
+    const partial = macOnlyFixture(partialRoot);
+    partial.manifest.distribution.windows.certification = { status: "certified" };
+    writeFileSync(
+      join(partial.assetsDir, "release-manifest.json"),
+      `${JSON.stringify(partial.manifest)}\n`,
+    );
+    const checksumNames = [
+      `BMDL-Raw-Data-Register_1.3.0-rc.6_universal.dmg`,
+      `BMDL-Raw-Data-Register_1.3.0-rc.6_universal.app.tar.gz`,
+      `BMDL-Raw-Data-Register_1.3.0-rc.6_universal.app.tar.gz.sig`,
+      "release-manifest.json",
+      "tauri-update.json",
+    ];
+    writeFileSync(
+      join(partial.assetsDir, "SHA256SUMS.txt"),
+      `${checksumNames.map(name => `${sha256(join(partial.assetsDir, name))}  ${name}`).join("\n")}\n`,
+    );
+    assert.throws(
+      () => publishRelease(partial),
+      /valid only for a Mac-only pilot/,
+    );
+  } finally {
+    rmSync(stableRoot, { recursive: true, force: true });
+    rmSync(partialRoot, { recursive: true, force: true });
   }
 });
