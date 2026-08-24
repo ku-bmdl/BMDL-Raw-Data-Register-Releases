@@ -27,6 +27,20 @@ export function selectChannelReleases(releases, approvedStableTags = new Set()) 
   return selected;
 }
 
+export function validateSelectionForEvent(selected, releaseEventTag, requireStableEvent = false) {
+  const eventTag = String(releaseEventTag || "").trim();
+  if (!eventTag) {
+    if (requireStableEvent) throw new Error("Stable promotion requires a release event tag.");
+    return;
+  }
+  if (selected.pilot !== eventTag) {
+    throw new Error(`Published ${eventTag} is not the newest pilot candidate ${selected.pilot}.`);
+  }
+  if (requireStableEvent && selected.stable !== eventTag) {
+    throw new Error(`Release ${eventTag} does not have a successful stable-promotion approval.`);
+  }
+}
+
 if (process.argv[1]?.endsWith("select-channel-releases.mjs")) {
   try {
     const releases = JSON.parse(readFileSync(process.env.RELEASE_LIST_PATH || "release-list.json", "utf8"));
@@ -37,15 +51,11 @@ if (process.argv[1]?.endsWith("select-channel-releases.mjs")) {
         .filter(Boolean),
     );
     const selected = selectChannelReleases(releases, approvedStableTags);
-    if (selected.pilot !== process.env.RELEASE_EVENT_TAG) {
-      throw new Error(
-        `Published ${process.env.RELEASE_EVENT_TAG} is not the newest pilot candidate ${selected.pilot}.`,
-      );
-    }
-    if (
-      process.env.REQUIRE_STABLE_EVENT === "true"
-      && selected.stable !== process.env.RELEASE_EVENT_TAG
-    ) throw new Error(`Release ${process.env.RELEASE_EVENT_TAG} does not have a successful stable-promotion approval.`);
+    validateSelectionForEvent(
+      selected,
+      process.env.RELEASE_EVENT_TAG,
+      process.env.REQUIRE_STABLE_EVENT === "true",
+    );
     writeFileSync(process.env.SELECTED_RELEASES_PATH || "selected-releases.json", `${JSON.stringify(selected, null, 2)}\n`);
     console.log(`Selected pilot=${selected.pilot || "none"} stable=${selected.stable || "none"}.`);
   } catch (error) {

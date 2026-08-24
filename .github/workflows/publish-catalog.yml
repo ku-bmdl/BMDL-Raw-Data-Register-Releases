@@ -3,6 +3,7 @@ name: Publish update catalog and download page
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -70,7 +71,7 @@ jobs:
         uses: actions/deploy-pages@v4
 
   approve-stable:
-    if: ${{ !github.event.release.prerelease }}
+    if: ${{ github.event_name == 'release' && !github.event.release.prerelease }}
     needs: stage-pilot
     runs-on: ubuntu-latest
     environment: stable-promotion
@@ -79,7 +80,7 @@ jobs:
         run: 'true'
 
   publish-stable:
-    if: ${{ needs.approve-stable.result == 'success' }}
+    if: ${{ github.event_name == 'release' && needs.approve-stable.result == 'success' }}
     needs: [stage-pilot, approve-stable]
     runs-on: ubuntu-latest
     environment:
