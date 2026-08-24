@@ -14,6 +14,9 @@ submission provenance.
 - `release.published` first stages the newest immutable release on `pilot.json`,
   validates the exact signed asset set, and rejects an older event. The
   organization-wide read-only workflow-token policy is preserved.
+- `workflow_dispatch` is a pilot-only recovery path for the upstream GitHub
+  Pages release-event build-version collision. It always rebuilds the newest
+  published pilot and cannot enter either stable-promotion job.
 - Prereleases stop at the pilot feed and are not shown on the student download
   page.
 - A normal release waits behind the protected `stable-promotion` environment.

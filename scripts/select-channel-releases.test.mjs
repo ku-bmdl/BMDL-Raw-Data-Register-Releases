@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { selectChannelReleases } from "./select-channel-releases.mjs";
+import { selectChannelReleases, validateSelectionForEvent } from "./select-channel-releases.mjs";
 
 test("pilot takes the newest build while stable requires a recorded approval", () => {
   const releases = [
@@ -19,5 +19,18 @@ test("pilot takes the newest build while stable requires a recorded approval", (
   assert.deepEqual(
     selectChannelReleases(releases, new Set(["v1.2.0", "v1.3.0"])),
     { pilot: "v1.3.0", stable: "v1.3.0" },
+  );
+});
+
+test("manual Pages recovery accepts the newest catalog without a release event tag", () => {
+  const selected = { pilot: "v1.3.0-rc.7", stable: null };
+  assert.doesNotThrow(() => validateSelectionForEvent(selected, ""));
+  assert.throws(
+    () => validateSelectionForEvent(selected, "v1.3.0-rc.6"),
+    /not the newest pilot candidate/u,
+  );
+  assert.throws(
+    () => validateSelectionForEvent(selected, "", true),
+    /Stable promotion requires a release event tag/u,
   );
 });
