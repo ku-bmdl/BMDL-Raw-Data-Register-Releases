@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Privacy policy for BMDL Raw Data Register.">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
+    <title>BMDL Raw Data Register · Privacy policy</title>
+    <link rel="stylesheet" href="../styles.css">
+  </head>
+  <body>
+    <header class="masthead">
+      <div><strong>BMDL</strong><span>Bio-Integrated Microdevices Laboratory</span></div>
+      <span>Koç University · Lab software</span>
+    </header>
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <p class="eyebrow">Privacy policy · Effective 18 October 2026</p>
+        <h1 id="page-title">BMDL Raw Data Register</h1>
+        <p class="lede">BMDL Raw Data Register is an internal research tool of the Bio-Integrated Microdevices Laboratory (BMDL), Koç University. It is distributed only to authorized laboratory members and is used to document and verify research raw data.</p>
+      </section>
+
+      <section class="instructions" aria-labelledby="records-title">
+        <header><p class="section-number">01</p><h2 id="records-title">What the app records</h2></header>
+        <ol>
+          <li><strong>Registered files.</strong><span>When you register files, the app creates a manifest on your computer with file and folder names, sizes, SHA-256 checksums and timestamps, the experiment you chose, and a random installation identifier. The app never reads or changes the contents of your research files beyond computing their checksums.</span></li>
+          <li><strong>Your identity.</strong><span>When you sign in, the app receives your name and your institutional Koç University email address from Google. It records you as the operator of the files you register.</span></li>
+          <li><strong>A computer profile.</strong><span>Once per computer you say whether it is an instrument computer (and which instruments) or a personal/office computer. With each upload the app also sends the operating system and version, the computer manufacturer and model, whether it has a battery, the names of installed applications, whether the files came from a fixed, removable or network drive, and a one-way fingerprint of the computer name. The computer name itself is never sent or stored. These details only help the laboratory check that data came from the instrument it claims to; they never block an upload.</span></li>
+          <li><strong>What it does not collect.</strong><span>No location, contacts, browsing history, usage analytics, advertising identifiers or tracking.</span></li>
+        </ol>
+      </section>
+
+      <section class="instructions" aria-labelledby="google-title">
+        <header><p class="section-number">02</p><h2 id="google-title">Google sign-in and Google user data</h2></header>
+        <ol>
+          <li><strong>What the app asks Google for.</strong><span>Only your basic identity: the <code>openid</code> and <code>email</code> permissions. The app does not ask for access to your own Google Drive, Gmail, calendar or any other Google data.</span></li>
+          <li><strong>How sign-in data is handled.</strong><span>Your sign-in tokens are kept only in the app's memory while you are signed in. They are never written to disk, never shown on screen and are discarded when you sign out, after 15 minutes without activity, or when the app closes.</span></li>
+          <li><strong>Where files go.</strong><span>Files you upload are written directly to the laboratory's own Google Drive (the BMDL laboratory account), not to your Drive. The laboratory's server holds the only Drive permission, limited to files it creates (<code>drive.file</code>), and it checks each uploaded file's SHA-256 checksum with Google Drive.</span></li>
+          <li><strong>Limited Use.</strong><span>BMDL Raw Data Register's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements. Google user data is used only to sign you in, attribute and verify your research data, and deliver it to the laboratory. It is not used for advertising, not sold, and not used to train AI models.</span></li>
+        </ol>
+      </section>
+
+      <section class="instructions" aria-labelledby="flow-title">
+        <header><p class="section-number">03</p><h2 id="flow-title">Where data goes</h2></header>
+        <ol>
+          <li><strong>On your computer.</strong><span>Registration, checksums and export work without Internet access. Nothing leaves your computer until you upload or transfer a package.</span></li>
+          <li><strong>Laboratory services.</strong><span>Uploads go to the laboratory's Google Drive. The manifest, checksums, computer profile and verification results go to the laboratory's LabMate server (hosted on Railway), which confirms the transfer and sends a receipt to you and the principal investigator in the laboratory Slack workspace.</span></li>
+          <li><strong>Update checks.</strong><span>When you choose “Check for updates”, the app asks the BMDL release site for the current version number; no personal data is sent. Windows updates are delivered by Microsoft Store.</span></li>
+        </ol>
+      </section>
+
+      <section class="integrity" aria-labelledby="retention-title">
+        <header><p class="section-number">04</p><h2 id="retention-title">Use, sharing and retention</h2></header>
+        <p>Data is used only to document and verify research data within BMDL and is kept according to Koç University and laboratory research-data policies. It is not sold or shared with anyone other than the service providers named above (Google, Railway, Slack) acting for the laboratory. Every sign-in, upload and verification step is recorded in the laboratory's audit log.</p>
+        <p>To ask what data is held about you, or to request correction or deletion, contact <a href="mailto:bmdl@ku.edu.tr">bmdl@ku.edu.tr</a>. You can also remove the app's access to your Google account at any time at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</p>
+      </section>
+    </main>
+    <footer>
+      <span>Privacy questions?</span>
+      <a href="mailto:bmdl@ku.edu.tr">bmdl@ku.edu.tr</a>
+    </footer>
+  </body>
+</html>
