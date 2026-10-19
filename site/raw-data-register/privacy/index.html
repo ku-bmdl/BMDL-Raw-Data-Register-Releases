@@ -15,7 +15,7 @@
     </header>
     <main>
       <section class="hero" aria-labelledby="page-title">
-        <p class="eyebrow">Privacy policy · Effective 18 October 2026</p>
+        <p class="eyebrow">Privacy policy · Effective 19 October 2026</p>
         <h1 id="page-title">BMDL Raw Data Register</h1>
         <p class="lede">BMDL Raw Data Register is an internal research tool of the Bio-Integrated Microdevices Laboratory (BMDL), Koç University. It is distributed only to authorized laboratory members and is used to document and verify research raw data.</p>
       </section>
@@ -26,6 +26,9 @@
           <li><strong>Registered files.</strong><span>When you register files, the app creates a manifest on your computer with file and folder names, sizes, SHA-256 checksums and timestamps, the experiment you chose, and a random installation identifier. The app never reads or changes the contents of your research files beyond computing their checksums.</span></li>
           <li><strong>Your identity.</strong><span>When you sign in, the app receives your name and your institutional Koç University email address from Google. It records you as the operator of the files you register.</span></li>
           <li><strong>A computer profile.</strong><span>Once per computer you say whether it is an instrument computer (and which instruments) or a personal/office computer. With each upload the app also sends the operating system and version, the computer manufacturer and model, whether it has a battery, the names of installed applications, whether the files came from a fixed, removable or network drive, and a one-way fingerprint of the computer name. The computer name itself is never sent or stored. These details only help the laboratory check that data came from the instrument it claims to; they never block an upload.</span></li>
+          <li><strong>Each sign-in.</strong><span>Every time you sign in, the app sends the laboratory the app version, an installation identifier, the operating system and version, the processor architecture, the computer type (instrument or personal/office) and a machine fingerprint. The fingerprint is a SHA-256 hash of a fixed laboratory prefix and the computer name. It is not reversible in general, but someone who already knows a computer's name can compute the hash and match it. The computer name itself is never sent.</span></li>
+          <li><strong>An installation register.</strong><span>The laboratory keeps a register of installations showing who signed in on each and how many uploads were made. It is linked to your signed-in email address and is visible only to the principal investigator.</span></li>
+          <li><strong>How files were made.</strong><span>On personal or office computers, each upload also records your answer to whether the files were recorded on that computer or copied from another.</span></li>
           <li><strong>What it does not collect.</strong><span>No location, contacts, browsing history, usage analytics, advertising identifiers or tracking.</span></li>
         </ol>
       </section>
