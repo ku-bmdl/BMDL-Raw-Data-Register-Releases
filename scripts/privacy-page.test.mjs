@@ -18,3 +18,13 @@ test("privacy page loads no scripts and the download page links to it", () => {
   assert.match(privacy, /script-src|default-src 'none'/u);
   assert.match(downloadPage, /href="privacy\/"/u);
 });
+
+test("1.5 privacy page matches what the app and server record now", () => {
+  assert.doesNotMatch(privacy, /computer name itself is never sent/u, "the computer name is sent at sign-in since 1.5");
+  assert.match(privacy, /computer name/u);
+  assert.match(privacy, /refused/iu);
+  assert.match(privacy, /AI review/u);
+  assert.match(privacy, /email/iu);
+  assert.match(privacy, /someone else's experiment/u);
+  assert.match(privacy, /Effective 25 October 2026/u);
+});
