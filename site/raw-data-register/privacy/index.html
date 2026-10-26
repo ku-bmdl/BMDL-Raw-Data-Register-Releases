@@ -15,47 +15,80 @@
     </header>
     <main>
       <section class="hero" aria-labelledby="page-title">
-        <p class="eyebrow">Privacy policy · Effective 19 October 2026</p>
+        <p class="eyebrow">Privacy policy · Effective 26 October 2026</p>
         <h1 id="page-title">BMDL Raw Data Register</h1>
-        <p class="lede">BMDL Raw Data Register is an internal research tool of the Bio-Integrated Microdevices Laboratory (BMDL), Koç University. It is distributed only to authorized laboratory members and is used to document and verify research raw data.</p>
+        <p class="lede">BMDL Raw Data Register is a desktop app for Mac and Windows. It is an internal research tool of the Bio-Integrated Microdevices Laboratory (BMDL), Koç University, and is intended for authorized laboratory members. It is used to document, upload and verify research raw data. This page explains what the app and the laboratory's server record, where it goes, and how long it is kept.</p>
+      </section>
+
+      <section class="instructions" aria-labelledby="controller-title">
+        <header><p class="section-number">01</p><h2 id="controller-title">Who is responsible</h2></header>
+        <ol>
+          <li><strong>Data controller.</strong><span>Koç University, Bio-Integrated Microdevices Laboratory, Rumelifeneri Yolu, 34450 Sarıyer, İstanbul, Türkiye.</span></li>
+          <li><strong>Contact.</strong><span>For any privacy question or request, write to <a href="mailto:bmdl@ku.edu.tr">bmdl@ku.edu.tr</a>.</span></li>
+          <li><strong>Legal notice.</strong><span>Koç University's personal data notice under the Turkish Personal Data Protection Law (KVKK) explains the legal bases, international transfers and your rights in full: <a href="https://www.ku.edu.tr/kisisel-verilerin-korunmasi/">ku.edu.tr/kisisel-verilerin-korunmasi</a>.</span></li>
+        </ol>
       </section>
 
       <section class="instructions" aria-labelledby="records-title">
-        <header><p class="section-number">01</p><h2 id="records-title">What the app records</h2></header>
+        <header><p class="section-number">02</p><h2 id="records-title">What is recorded</h2></header>
         <ol>
-          <li><strong>Registered files.</strong><span>When you register files, the app creates a manifest on your computer with file and folder names, sizes, SHA-256 checksums and timestamps, the experiment you chose, and a random installation identifier. The app never reads or changes the contents of your research files beyond computing their checksums.</span></li>
-          <li><strong>Your identity.</strong><span>When you sign in, the app receives your name and your institutional Koç University email address from Google. It records you as the operator of the files you register.</span></li>
-          <li><strong>A computer profile.</strong><span>Once per computer you say whether it is an instrument computer (and which instruments) or a personal/office computer. With each upload the app also sends the operating system and version, the computer manufacturer and model, whether it has a battery, the names of installed applications, whether the files came from a fixed, removable or network drive, and a one-way fingerprint of the computer name. The computer name itself is never sent or stored. These details only help the laboratory check that data came from the instrument it claims to; they never block an upload.</span></li>
-          <li><strong>Each sign-in.</strong><span>Every time you sign in, the app sends the laboratory the app version, an installation identifier, the operating system and version, the processor architecture, the computer type (instrument or personal/office) and a machine fingerprint. The fingerprint is a SHA-256 hash of a fixed laboratory prefix and the computer name. It is not reversible in general, but someone who already knows a computer's name can compute the hash and match it. The computer name itself is never sent.</span></li>
-          <li><strong>An installation register.</strong><span>The laboratory keeps a register of installations showing who signed in on each and how many uploads were made. It is linked to your signed-in email address and is visible only to the principal investigator.</span></li>
-          <li><strong>How files were made.</strong><span>On personal or office computers, each upload also records your answer to whether the files were recorded on that computer or copied from another.</span></li>
-          <li><strong>What it does not collect.</strong><span>No location, contacts, browsing history, usage analytics, advertising identifiers or tracking.</span></li>
+          <li><strong>Your files.</strong><span>The app reads the files you choose so that it can compute SHA-256 checksums, package them and upload them. It never changes the original files. A manifest lists file and folder names, sizes, checksums and timestamps.</span></li>
+          <li><strong>Your identity.</strong><span>Google confirms your institutional Koç University email address. Your display name normally comes from the laboratory member list. You are recorded as the operator of the files you register.</span></li>
+          <li><strong>Each sign-in.</strong><span>When you sign in, the app sends the laboratory: the app version, an installation identifier, the operating system and version, the processor architecture, the computer type (instrument or personal/office), and the device name (for example “Ayşe's MacBook Pro”; if there is none, the hostname is used). It never sends your operating-system login name. It also sends a fingerprint: a SHA-256 hash of a fixed laboratory prefix and the lowercase hostname. The fingerprint can link a new installation to an earlier one on the same computer. The register keeps up to five recently seen device names in total for each installation.</span></li>
+          <li><strong>A computer profile with each upload.</strong><span>With each upload the app sends: the operating system and version, the computer manufacturer and model, whether it has a battery, up to 300 installed application names, and whether the files came from a fixed, removable or network drive. On personal or office computers it also records your answer to whether the files were recorded on that computer or copied from another. These details help the laboratory check that data came from the instrument it claims to. Notes about mismatches are only advisory, but a valid computer and instrument profile is required to upload.</span></li>
+          <li><strong>The installation register.</strong><span>The laboratory keeps a register of installations: who signed in on each one, how many times and when, and the uploads made. It is visible only to the principal investigator.</span></li>
+          <li><strong>Refused sign-ins.</strong><span>If a verified Koç University account is refused because it is not on the laboratory member list, the refusal is recorded in the audit log. When a valid installation identifier is available, the register also keeps the email address, the reason, the first and last time, and the number of attempts.</span></li>
+          <li><strong>Your answers.</strong><span>What you type in the app — experiment details, upload descriptions and your answers when you submit — is stored with the experiment.</span></li>
+          <li><strong>Adding data to someone else's experiment.</strong><span>If a lab member lists you as a participant, you can add your own files to their experiment. Full receipts, including file names and your explanation, go to the owner, the principal investigator and you. Other listed lab members get a short notice with the names, the experiment name, the number of files and your explanation. Participants see selected descriptive details of the experiment. They do not see other people's file lists or final answers.</span></li>
+          <li><strong>AI review requests.</strong><span>If you request a review of a submitted experiment, your question is stored on the laboratory server. The laboratory prepares the review with Claude, an AI service from Anthropic, using that experiment's submitted descriptions and files, and the PDF report is kept in the laboratory's Google Drive and shared only with your Koç University account. Anthropic does not use this data to train its models.</span></li>
+          <li><strong>What is not collected.</strong><span>No advertising identifiers, location, contacts or browsing history.</span></li>
         </ol>
       </section>
 
       <section class="instructions" aria-labelledby="google-title">
-        <header><p class="section-number">02</p><h2 id="google-title">Google sign-in and Google user data</h2></header>
+        <header><p class="section-number">03</p><h2 id="google-title">Google sign-in and Google user data</h2></header>
         <ol>
-          <li><strong>What the app asks Google for.</strong><span>Only your basic identity: the <code>openid</code> and <code>email</code> permissions. The app does not ask for access to your own Google Drive, Gmail, calendar or any other Google data.</span></li>
-          <li><strong>How sign-in data is handled.</strong><span>Your sign-in tokens are kept only in the app's memory while you are signed in. They are never written to disk, never shown on screen and are discarded when you sign out, after 15 minutes without activity, or when the app closes.</span></li>
-          <li><strong>Where files go.</strong><span>Files you upload are written directly to the laboratory's own Google Drive (the BMDL laboratory account), not to your Drive. The laboratory's server holds the only Drive permission, limited to files it creates (<code>drive.file</code>), and it checks each uploaded file's SHA-256 checksum with Google Drive.</span></li>
-          <li><strong>Limited Use.</strong><span>BMDL Raw Data Register's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements. Google user data is used only to sign you in, attribute and verify your research data, and deliver it to the laboratory. It is not used for advertising, not sold, and not used to train AI models.</span></li>
+          <li><strong>What the app asks Google for.</strong><span>Only the <code>openid</code> and <code>email</code> permissions. The app does not ask for access to your own Google Drive, Gmail, calendar or any other Google data.</span></li>
+          <li><strong>Sign-in tokens.</strong><span>Your sign-in tokens are kept only in the app's memory and are never written to disk. They are discarded when you sign out, after 15 minutes without activity, or when the app closes.</span></li>
+          <li><strong>The laboratory's own Google account.</strong><span>Separately, the laboratory's server holds two permissions on the laboratory's own Google account, not on yours: a Drive permission limited to files it creates (<code>drive.file</code>), used to store uploads and check their SHA-256 checksums, and a send-only Gmail permission (<code>gmail.send</code>), used to send receipt emails.</span></li>
+          <li><strong>Limited Use.</strong><span>BMDL Raw Data Register's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements. Google user data is used only to sign you in, attribute and verify your research data, and deliver it to the laboratory. It is not sold and not used for advertising.</span></li>
         </ol>
       </section>
 
       <section class="instructions" aria-labelledby="flow-title">
-        <header><p class="section-number">03</p><h2 id="flow-title">Where data goes</h2></header>
+        <header><p class="section-number">04</p><h2 id="flow-title">Where data goes</h2></header>
         <ol>
-          <li><strong>On your computer.</strong><span>Registration, checksums and export work without Internet access. Nothing leaves your computer until you upload or transfer a package.</span></li>
-          <li><strong>Laboratory services.</strong><span>Uploads go to the laboratory's Google Drive. The manifest, checksums, computer profile and verification results go to the laboratory's LabMate server (hosted on Railway), which confirms the transfer and sends a receipt to you and the principal investigator in the laboratory Slack workspace.</span></li>
-          <li><strong>Update checks.</strong><span>When you choose “Check for updates”, the app asks the BMDL release site for the current version number; no personal data is sent. Windows updates are delivered by Microsoft Store.</span></li>
+          <li><strong>The laboratory server.</strong><span>Your sign-in, the experiment you choose and your answers reach the laboratory's server (hosted on Railway) before any file is uploaded. Registration needs an Internet connection. The manifest, checksums, computer profile and verification results are also stored there.</span></li>
+          <li><strong>Google Drive.</strong><span>Uploaded files are stored in the laboratory's Google Drive, not in yours.</span></li>
+          <li><strong>Emails.</strong><span>When emails are enabled, you get upload acknowledgements and submission receipts at your Koç University address. They can include the computer name, the instrument and file names. They are copied (CC/BCC) to the laboratory; currently the principal investigator and the laboratory archive mailbox. Daily reminders about unfinished work go only to you, without copies.</span></li>
+          <li><strong>Slack.</strong><span>Receipts and notices are posted in the laboratory Slack workspace, in group messages with the principal investigator (and, for shared experiments, the people described above).</span></li>
+          <li><strong>Atlassian Confluence.</strong><span>For accounts configured for it, submission summaries and file names are published to the laboratory's Research Goals pages in Confluence. Who can see them depends on those pages' permissions.</span></li>
+          <li><strong>Update checks.</strong><span>The app asks the BMDL release site for the current version number. Windows updates come from the Microsoft Store.</span></li>
         </ol>
       </section>
 
+      <section class="instructions" aria-labelledby="audit-title">
+        <header><p class="section-number">05</p><h2 id="audit-title">Audit log and activity records</h2></header>
+        <ol>
+          <li><strong>What is logged.</strong><span>The laboratory records operational and audit events that identify you: sign-ins, screen navigation in the app, review requests, uploads and verification steps.</span></li>
+          <li><strong>Why.</strong><span>To run the service, investigate problems, and monitor laboratory activity. These records are used only within the laboratory.</span></li>
+        </ol>
+      </section>
+
+      <section class="integrity" aria-labelledby="sharing-title">
+        <header><p class="section-number">06</p><h2 id="sharing-title">Sharing and service providers</h2></header>
+        <p>Data is used only to document and verify research data within BMDL. It is not sold and not used for advertising. It is shared only with these service providers, acting for the laboratory: Google (sign-in, Drive, Gmail), Railway (hosting the laboratory server), Slack, Atlassian (Confluence), Anthropic (Claude, for AI reviews) and Microsoft (Microsoft Store distribution). These services are hosted outside Türkiye, so your data is transferred abroad. See the university KVKK notice for details on international transfers.</p>
+      </section>
+
       <section class="integrity" aria-labelledby="retention-title">
-        <header><p class="section-number">04</p><h2 id="retention-title">Use, sharing and retention</h2></header>
-        <p>Data is used only to document and verify research data within BMDL and is kept according to Koç University and laboratory research-data policies. It is not sold or shared with anyone other than the service providers named above (Google, Railway, Slack) acting for the laboratory. Every sign-in, upload and verification step is recorded in the laboratory's audit log.</p>
-        <p>To ask what data is held about you, or to request correction or deletion, contact <a href="mailto:bmdl@ku.edu.tr">bmdl@ku.edu.tr</a>. You can also remove the app's access to your Google account at any time at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</p>
+        <header><p class="section-number">07</p><h2 id="retention-title">How long data is kept</h2></header>
+        <p>Experiments, uploaded files, installation records, audit logs, Slack messages and emails are kept for 5 years. Closing or discarding unfinished work does not delete stored records or files.</p>
+      </section>
+
+      <section class="integrity" aria-labelledby="rights-title">
+        <header><p class="section-number">08</p><h2 id="rights-title">Your rights</h2></header>
+        <p>You can ask what data is held about you, and ask for it to be corrected or deleted, by writing to <a href="mailto:bmdl@ku.edu.tr">bmdl@ku.edu.tr</a>. You can remove the app's access to your Google account at any time at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</p>
+        <p>For the legal bases of processing, international transfers, your other rights under KVKK and GDPR, and how to complain, see Koç University's <a href="https://www.ku.edu.tr/kisisel-verilerin-korunmasi/">personal data notice</a>.</p>
       </section>
     </main>
     <footer>
