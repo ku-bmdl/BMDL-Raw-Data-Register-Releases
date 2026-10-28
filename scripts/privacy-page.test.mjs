@@ -25,7 +25,15 @@ test("1.5 privacy page matches what the app and server record now", () => {
   assert.match(privacy, /refused/iu);
   assert.match(privacy, /email/iu);
   assert.match(privacy, /someone else's experiment/u);
-  assert.match(privacy, /Effective 26 October 2026/u);
+  assert.match(privacy, /Effective 28 October 2026/u);
+});
+
+test("privacy page explains the saved sign-in on personal computers", () => {
+  assert.match(privacy, /On a shared lab computer, your sign-in tokens are kept only in the app's memory/u);
+  assert.match(privacy, /you stay signed in until you press Sign out/u);
+  assert.match(privacy, /Keychain on macOS, Credential Manager on Windows/u);
+  assert.match(privacy, /never in an ordinary file/u);
+  assert.doesNotMatch(privacy, /<span>Your sign-in tokens are kept only in the app's memory/u, "personal computers keep a saved sign-in since 1.5.3");
 });
 
 test("privacy page covers registers, integrations, audit, retention and controller", () => {
