@@ -15,7 +15,7 @@
     </header>
     <main>
       <section class="hero" aria-labelledby="page-title">
-        <p class="eyebrow">Privacy policy · Effective 26 October 2026</p>
+        <p class="eyebrow">Privacy policy · Effective 28 October 2026</p>
         <h1 id="page-title">BMDL Raw Data Register</h1>
         <p class="lede">BMDL Raw Data Register is a desktop app for Mac and Windows. It is an internal research tool of the Bio-Integrated Microdevices Laboratory (BMDL), Koç University, and is intended for authorized laboratory members. It is used to document, upload and verify research raw data. This page explains what the app and the laboratory's server record, where it goes, and how long it is kept.</p>
       </section>
@@ -49,7 +49,7 @@
         <header><p class="section-number">03</p><h2 id="google-title">Google sign-in and Google user data</h2></header>
         <ol>
           <li><strong>What the app asks Google for.</strong><span>Only the <code>openid</code> and <code>email</code> permissions. The app does not ask for access to your own Google Drive, Gmail, calendar or any other Google data.</span></li>
-          <li><strong>Sign-in tokens.</strong><span>Your sign-in tokens are kept only in the app's memory and are never written to disk. They are discarded when you sign out, after 15 minutes without activity, or when the app closes.</span></li>
+          <li><strong>Sign-in tokens.</strong><span>On a shared lab computer, your sign-in tokens are kept only in the app's memory and are never written to disk. They are discarded when you sign out, after 15 minutes without activity, or when the app closes. On a computer you set up as your own laptop or an office PC, you stay signed in until you press Sign out: from version 1.5.3, the app keeps your Google sign-in renewal token and your email address in the computer's own password store (Keychain on macOS, Credential Manager on Windows), never in an ordinary file, and uses them only to sign you in again when the app starts. They are deleted when you sign out, when you change the computer to a shared lab computer, or when Google or the laboratory no longer accepts them.</span></li>
           <li><strong>The laboratory's own Google account.</strong><span>Separately, the laboratory's server holds two permissions on the laboratory's own Google account, not on yours: a Drive permission limited to files it creates (<code>drive.file</code>), used to store uploads and check their SHA-256 checksums, and a send-only Gmail permission (<code>gmail.send</code>), used to send receipt emails.</span></li>
           <li><strong>Limited Use.</strong><span>BMDL Raw Data Register's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements. Google user data is used only to sign you in, attribute and verify your research data, and deliver it to the laboratory. It is not sold and not used for advertising.</span></li>
         </ol>
